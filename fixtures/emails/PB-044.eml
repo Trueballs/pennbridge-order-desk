@@ -1,0 +1,12 @@
+From: mia@alderwick.example
+To: orders@pennbridge.example
+Subject: Purchase order PB-044
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <pb-044@fixtures.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Please process the attached purchase order PB-044 for MAIN delivery. Thanks, =
+Mia.

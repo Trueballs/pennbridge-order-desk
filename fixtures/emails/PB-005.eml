@@ -1,0 +1,12 @@
+From: mia@alderwick.example
+To: orders@pennbridge.example
+Subject: Purchase order PB-005
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <pb-005@fixtures.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+PO PB-005. We need 8 individual 6204-2RS sealed bearings, 20 x 47 x 14 mm. De=
+liver MAIN. Thanks.

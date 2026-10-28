@@ -1,0 +1,11 @@
+From: mia@alderwick.example
+To: orders@pennbridge.example
+Subject: Purchase order PB-020
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <pb-020@fixtures.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+MIME-Version: 1.0
+
+PB-020: 1.5 packs FB-0830-A2-100 to MAIN please.

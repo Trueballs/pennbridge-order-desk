@@ -1,0 +1,11 @@
+From: mia@alderwick.example
+To: orders@pennbridge.example
+Subject: Purchase order PB-019
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <pb-019@fixtures.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+MIME-Version: 1.0
+
+PB-019: 6 each BR-6204-OLD to MAIN. We need the exact old version.

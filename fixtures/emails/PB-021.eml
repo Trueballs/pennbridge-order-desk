@@ -1,0 +1,12 @@
+From: mia@alderwick.example
+To: orders@pennbridge.example
+Subject: Purchase order PB-021
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <pb-021@fixtures.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+PO PB-021: 2 packs FB-0830-A2-100 at our agreed =C2=A310 per pack, =C2=A320 n=
+et total. MAIN.

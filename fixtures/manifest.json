@@ -1,0 +1,252 @@
+[
+  {
+    "path": "fixtures/emails/PB-001.eml",
+    "sha256": "ccb2cae248300c245bc3afadc5c8d19e1ba18926f9108ab70b24f6cbd94cb87e",
+    "bytes": 427
+  },
+  {
+    "path": "fixtures/emails/PB-002.eml",
+    "sha256": "ccb8173f295e106ad1d6fc6e1a82ff9aa2052feafb539fc233a5d4a65b6a1e4b",
+    "bytes": 442
+  },
+  {
+    "path": "fixtures/emails/PB-003.eml",
+    "sha256": "42ca60c6e96bcfc517aa1711b515d6d191fb2e613945ec9eaf9c41b7da1d3446",
+    "bytes": 381
+  },
+  {
+    "path": "fixtures/emails/PB-004.eml",
+    "sha256": "77b6836eb0e69ca19082a28fe675bfe91c9a57447f40d0196b47e7638094475f",
+    "bytes": 362
+  },
+  {
+    "path": "fixtures/emails/PB-005.eml",
+    "sha256": "e2993f65560e276ac1fd61ab75d4d7ae006f4cf7daafe873bb9c286ddc2ea07a",
+    "bytes": 421
+  },
+  {
+    "path": "fixtures/emails/PB-006.eml",
+    "sha256": "44c0c4ce6a69b671bfe404318146abb8d889a0b227c0bf717422279bfd78663e",
+    "bytes": 428
+  },
+  {
+    "path": "fixtures/emails/PB-007.eml",
+    "sha256": "07dcb61c8460c78c2e5c0f71e59724a5c24335854886377bac305a6fc4beaed0",
+    "bytes": 411
+  },
+  {
+    "path": "fixtures/emails/PB-008.eml",
+    "sha256": "5cbca0ad90c2a8782e377421418c903b2777e82e50ae83a066fd9d8946a62d5f",
+    "bytes": 410
+  },
+  {
+    "path": "fixtures/emails/PB-009.eml",
+    "sha256": "710412bc26550f5d52989ee0cfc05cb816e170f2bda966df07ba120b6dc34c5f",
+    "bytes": 388
+  },
+  {
+    "path": "fixtures/emails/PB-010.eml",
+    "sha256": "828cd0cb773ad59d2d9bac5f5b7bc88aeaa4bf9274a94ab95a39c2800b9768d1",
+    "bytes": 853
+  },
+  {
+    "path": "fixtures/emails/PB-011.eml",
+    "sha256": "f85dc29bbd80d656a414c3e27550c680357514a8476d014dcaf487ffa2ca99de",
+    "bytes": 379
+  },
+  {
+    "path": "fixtures/emails/PB-012.eml",
+    "sha256": "d5285a5229f50eff94ba54346353bca2e1212337d38ea49d319466896e811c5b",
+    "bytes": 377
+  },
+  {
+    "path": "fixtures/emails/PB-013.eml",
+    "sha256": "1746e9485e0e3f6970ef0b56d3503acd3f9c14fe2b45d433b2c12d17d9647c86",
+    "bytes": 372
+  },
+  {
+    "path": "fixtures/emails/PB-014.eml",
+    "sha256": "04bf1dd187f29b983228564c3ab8a7ddfbaf5c62db623449148a9c2c334c4808",
+    "bytes": 368
+  },
+  {
+    "path": "fixtures/emails/PB-015.eml",
+    "sha256": "56d67fb3008d4a1fe9ed09f0c0fc18a9ffb42598ab4e46fa11cafbbd8569bb85",
+    "bytes": 361
+  },
+  {
+    "path": "fixtures/emails/PB-016.eml",
+    "sha256": "bae352e0fbb820a0f4af80a62400a8fca48b3a5f97cae716fc43066351e2b45d",
+    "bytes": 382
+  },
+  {
+    "path": "fixtures/emails/PB-017.eml",
+    "sha256": "9037f151ba362564edc77fefb7211eac3f81c1e1da465c109644e9f09b97f57a",
+    "bytes": 413
+  },
+  {
+    "path": "fixtures/emails/PB-018.eml",
+    "sha256": "9eb9405bf69813cce6a601eaeaf371361decfbd8344329aad3996fa208dd1284",
+    "bytes": 371
+  },
+  {
+    "path": "fixtures/emails/PB-019.eml",
+    "sha256": "b649555a7489607c7ae3add071891a9ee202f58d56279619567bcc02fa7609bd",
+    "bytes": 376
+  },
+  {
+    "path": "fixtures/emails/PB-020.eml",
+    "sha256": "e4a17d29a22c090610e6562fcac4693f4fa5ac852461376a7c06c643012a9065",
+    "bytes": 358
+  },
+  {
+    "path": "fixtures/emails/PB-021.eml",
+    "sha256": "d6c49425c6cf6e5a09471bdaa0a05e390cec2dcbfee61ec3af4003aaf5f3a1af",
+    "bytes": 417
+  },
+  {
+    "path": "fixtures/emails/PB-022.eml",
+    "sha256": "0841d078b63cd8ed0e3500d109d12a48c1a34347503e82650e9cca87ed9b635d",
+    "bytes": 384
+  },
+  {
+    "path": "fixtures/emails/PB-023.eml",
+    "sha256": "ce92337e6588c6950ef6bf1d0897fbebe7cc5a3d997cb8b3fc70f9a9184e5029",
+    "bytes": 383
+  },
+  {
+    "path": "fixtures/emails/PB-024.eml",
+    "sha256": "51a903a5e0cb565f436ad4d1b4e1f51d12b3f8d1b00bb89a62dd1edbfffab9f8",
+    "bytes": 374
+  },
+  {
+    "path": "fixtures/emails/PB-025.eml",
+    "sha256": "90ad2d5e4f95e7180f934404a506f64411a5bdfe886aae8deeee8f5ffea7785e",
+    "bytes": 366
+  },
+  {
+    "path": "fixtures/emails/PB-026.eml",
+    "sha256": "7206d878f99f04d75f1389ad221fd5b9caa18def9f7aae9fc57601a020108292",
+    "bytes": 379
+  },
+  {
+    "path": "fixtures/emails/PB-027.eml",
+    "sha256": "dd0c48016ef9d7013ba59f6e564cb54d5fe7777994c7a88b396de6db2e2a2cec",
+    "bytes": 408
+  },
+  {
+    "path": "fixtures/emails/PB-028.eml",
+    "sha256": "43c19bee12ec828430b90b58e9f312ac237d98ff3c99b22ae58bc55a0bb63e5d",
+    "bytes": 406
+  },
+  {
+    "path": "fixtures/emails/PB-029.eml",
+    "sha256": "6aebce3baae5d8f5f45e40ad8b262eab16aaa8d3c890619f5f17748eeaf43145",
+    "bytes": 413
+  },
+  {
+    "path": "fixtures/emails/PB-030.eml",
+    "sha256": "fd8c5c7eaf169a162ce483f6838ad3e9978b517efca67858da29e4db197b9a55",
+    "bytes": 362
+  },
+  {
+    "path": "fixtures/emails/PB-031.eml",
+    "sha256": "d2578f8593ca4e1e6335fcfff75cb0fea82c058eb93bc4b0852dfa88fcf38ffb",
+    "bytes": 352
+  },
+  {
+    "path": "fixtures/emails/PB-032.eml",
+    "sha256": "3054a733c90254d0503c5b2db883e28738d4aecc2b35187b71da96c22a79c384",
+    "bytes": 421
+  },
+  {
+    "path": "fixtures/emails/PB-033.eml",
+    "sha256": "9ad4a79453135155b214bd5bbcaa35293c1869e644a744aed054349e630a1282",
+    "bytes": 358
+  },
+  {
+    "path": "fixtures/emails/PB-034.eml",
+    "sha256": "2413cbc7dd98db7dbbbbec0d327dfc8a8c41e64cfa74b3fb612aec437288ebfa",
+    "bytes": 412
+  },
+  {
+    "path": "fixtures/emails/PB-035.eml",
+    "sha256": "3379b62c780400e7bdde19ba6ec5ad90520ee642b68f9e142f0a50cc8a24855d",
+    "bytes": 411
+  },
+  {
+    "path": "fixtures/emails/PB-036.eml",
+    "sha256": "4af7c13cc8fb78f238f5e7a0f781df211fc137e139bdecd5915f6bd47dc5207b",
+    "bytes": 365
+  },
+  {
+    "path": "fixtures/emails/PB-037.eml",
+    "sha256": "be82fb363926dc8395e03c0143ef15831f13b1bee7b5ba3312e9254564215835",
+    "bytes": 459
+  },
+  {
+    "path": "fixtures/emails/PB-038.eml",
+    "sha256": "2935ba62a302aeeb0db209dfdf6ec84e08acb5b2daa47b0252e6d5c4b8054234",
+    "bytes": 412
+  },
+  {
+    "path": "fixtures/emails/PB-039.eml",
+    "sha256": "1302ad76f830aad6c4bbc935529be1f9bb8a15205585b9abc1bb1bf6d8ce6b40",
+    "bytes": 370
+  },
+  {
+    "path": "fixtures/emails/PB-040.eml",
+    "sha256": "32cba7469594fc7fa9c6093d60c50486caaba18fe1d7e3ef8a6d06d6638ec9a0",
+    "bytes": 983
+  },
+  {
+    "path": "fixtures/emails/PB-041.eml",
+    "sha256": "6d9c1b3a17af687bb63b395f9a1192c2c2761fd8036e917479fbc49b127a6362",
+    "bytes": 424
+  },
+  {
+    "path": "fixtures/emails/PB-042.eml",
+    "sha256": "a3aa8b9010ae1c08c02d855709e56929aa31a029cb43f30e37b114c2ca94be15",
+    "bytes": 431
+  },
+  {
+    "path": "fixtures/emails/PB-043.eml",
+    "sha256": "eef6a05944f689487963ce1586d07950fe27e9f07a01d2911a9791062c344f6a",
+    "bytes": 358
+  },
+  {
+    "path": "fixtures/emails/PB-044.eml",
+    "sha256": "bb971759cce6af1eabbe5cc9cafae70770eb5d1982cac1a80cfba98c3cc722c9",
+    "bytes": 406
+  },
+  {
+    "path": "fixtures/emails/PB-045.eml",
+    "sha256": "ffb1215357512410f5aa0bc5e390dd7fd8346bbac02b108be7f64284b35f7f18",
+    "bytes": 518
+  },
+  {
+    "path": "fixtures/emails/PB-046.eml",
+    "sha256": "2b8a21f3c526909b80b9652cd07ca7fa6fa2eed14cf3a3afc6ee8c9d5d1dac45",
+    "bytes": 988
+  },
+  {
+    "path": "fixtures/emails/PB-047.eml",
+    "sha256": "e351e1c7c811b4735de1aecdcb7763a40ea17e7e136326465e2e6aebdef12010",
+    "bytes": 462
+  },
+  {
+    "path": "fixtures/emails/PB-048.eml",
+    "sha256": "bc81e19517b1c766b8ac37a1faad7cc2d099582c8674d4beced507fcc0abb849",
+    "bytes": 419
+  },
+  {
+    "path": "fixtures/emails/PB-049.eml",
+    "sha256": "adb8628c4baa6ad36eff6e425852ab10ff135e9886e334d3987f2ec6f8eaffc0",
+    "bytes": 362
+  },
+  {
+    "path": "fixtures/emails/PB-050.eml",
+    "sha256": "3db8a900bdf00c438a4a1addcff92eafd41e36e560663a1f04b19214b52ab6ad",
+    "bytes": 449
+  }
+]

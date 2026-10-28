@@ -1,0 +1,36 @@
+From: mia@alderwick.example
+To: orders@pennbridge.example
+Subject: Purchase order PB-040
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <pb-040@fixtures.pennbridge.example>
+X-Pennbridge-Synthetic: true
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="pennbridge-fixture-PB-040"
+
+--pennbridge-fixture-PB-040
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Attached is PB-040 for MAIN. Please process the correct version. Thanks, Mia.
+
+--pennbridge-fixture-PB-040
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="PB-040-v1.txt"
+MIME-Version: 1.0
+
+PO PB-040
+BR-6204-2RS: 2 each
+Ship MAIN
+
+--pennbridge-fixture-PB-040
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="PB-040-final.txt"
+MIME-Version: 1.0
+
+PO PB-040
+BR-6204-2RS: 5 each
+Ship MAIN
+
+--pennbridge-fixture-PB-040--

@@ -1,0 +1,11 @@
+From: sam@brookmere.example
+To: orders@pennbridge.example
+Subject: Purchase order PB-024
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <pb-024@fixtures.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+MIME-Version: 1.0
+
+PB-024: 2 each BR-6204-ZZ at our old £4.50 rate. Ship MAIN. Sam

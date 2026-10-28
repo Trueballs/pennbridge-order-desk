@@ -1,0 +1,12 @@
+From: mia@alderwick.example
+To: orders@pennbridge.example
+Subject: Purchase order PB-006
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <pb-006@fixtures.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Please supply for PB-006: 2 packs of 100 M8 x 35 mm A2 stainless hex bolts. M=
+AIN delivery. Regards, Mia

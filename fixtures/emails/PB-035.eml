@@ -1,0 +1,12 @@
+From: mia@alderwick.example
+To: orders@pennbridge.example
+Subject: Purchase order PB-035
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <pb-035@fixtures.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Please cancel purchase order PB-035 entirely. The job has been postponed. Tha=
+nks, Mia.

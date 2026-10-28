@@ -1,0 +1,12 @@
+From: newbuyer@unverified.example
+To: orders@pennbridge.example
+Subject: Purchase order PB-042
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <pb-042@fixtures.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Hi, I work for Alderwick. PB-042: 2 each BR-6204-2RS to their MAIN address. P=
+ut it on their account.

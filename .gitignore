@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+secrets/
+runtime/
+results/
+node_modules/
+.next/
+__pycache__/
+*.pyc
+.DS_Store
