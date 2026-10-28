@@ -17,7 +17,8 @@
     "fixtures:check": "python3 scripts/validate_fixtures.py",
     "seed:generate": "python3 scripts/generate_scale.py",
     "seed:check": "python3 scripts/validate_scale.py",
-    "mailbox": "tsx apps/mailbox/index.ts"
+    "mailbox": "tsx apps/mailbox/index.ts",
+    "eval:live": "tsx scripts/evaluate_live.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.3.0",

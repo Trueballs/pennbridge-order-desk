@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
+import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import Decimal from 'decimal.js';
 import { z } from 'zod';
 import { ExtractedOrderSchema, type ExtractionProvider, type ExtractionInput, type ExtractedOrder, type ExtractedLine, type Reason, type Unit } from '../contracts/index';
@@ -90,7 +91,8 @@ export class MockProvider implements ExtractionProvider {
 
 export class LiveProvider implements ExtractionProvider {
   readonly mode='live' as const;
-  constructor(private opts:{runId:string;orderId:string}){}
+  /** `budget` replaces the Postgres-backed reservation (used by the standalone live benchmark). */
+  constructor(private opts:{runId:string;orderId:string;budget?:{reserve:(usd:string)=>Promise<string>;settle:(id:string,usd:string|null)=>Promise<void>}}){}
   async extract(input:ExtractionInput){
     if(process.env.LIVE_AI_ENABLED!=='true'||!process.env.ANTHROPIC_API_KEY)throw Object.assign(new Error('Live AI is not configured. Offline parsing remains available.'),{code:'MODEL_UNAVAILABLE'});
     const model=process.env.EXTRACTION_MODEL||'claude-haiku-5-5';
@@ -98,24 +100,70 @@ export class LiveProvider implements ExtractionProvider {
     const inRate=process.env.AI_INPUT_USD_PER_MILLION;const outRate=process.env.AI_OUTPUT_USD_PER_MILLION;
     if(!inRate||!outRate||!process.env.AI_PRICING_VERSION)throw Object.assign(new Error('Set verified model pricing and pricing version before enabling live AI.'),{code:'MODEL_UNAVAILABLE'});
     const system=await readFile(resolve(process.cwd(),'prompts/order-interpreter.md'),'utf8');
-    const schema=z.toJSONSchema(ExtractedOrderSchema,{unrepresentable:'any'});
+    // The SDK transform strips constraints structured outputs reject (pattern, min/max, propertyNames); ExtractedOrderSchema re-validates the reply.
+    const schema=zodOutputFormat(ExtractedOrderSchema).schema;
     const content=JSON.stringify({text:input.text,documents:input.documents.map(d=>({id:d.id,filename:d.filename})),evidence:input.evidence});
     // UTF-8 byte count is a deliberately conservative token reservation, including schema and system text.
     const maxInput=Buffer.byteLength(content+system+JSON.stringify(schema))+2048;const maxOutput=8192;
     const reserved=new Decimal(maxInput).mul(inRate).add(new Decimal(maxOutput).mul(outRate)).div(1e6).toFixed(6);
-    const reservation=await reserveModelBudget(this.opts.runId,this.opts.orderId,reserved,process.env.AI_RUN_BUDGET_USD||'5.00',process.env.AI_ORDER_BUDGET_USD||'0.10');
+    const reserve=this.opts.budget?.reserve??((usd:string)=>reserveModelBudget(this.opts.runId,this.opts.orderId,usd,process.env.AI_RUN_BUDGET_USD||'5.00',process.env.AI_ORDER_BUDGET_USD||'0.10'));
+    const settle=this.opts.budget?.settle??settleModelBudget;
+    const reservation=await reserve(reserved);let settled=false;
     const start=Date.now();const api=new Anthropic({apiKey:process.env.ANTHROPIC_API_KEY,maxRetries:0,timeout:45000});
     try {
       const response=await api.messages.create({model,max_tokens:maxOutput,system,messages:[{role:'user',content}],output_config:{format:{type:'json_schema',schema}}} as any);
-      if(response.stop_reason!=='end_turn')throw Object.assign(new Error(`Incomplete model output (${response.stop_reason}).`),{code:'MODEL_OUTPUT_INVALID'});
-      const raw=response.content.filter(x=>x.type==='text').map(x=>x.text).join('');
-      const extracted=ExtractedOrderSchema.parse(JSON.parse(raw));
+      // Bill first: a refusal, truncation or invalid reply still cost tokens. Cost rides on the thrown error.
       const actual=new Decimal(response.usage.input_tokens).mul(inRate).add(new Decimal(response.usage.output_tokens).mul(outRate)).div(1e6).toFixed(6);
-      await settleModelBudget(reservation,actual);
+      await settle(reservation,actual);settled=true;
+      const bill={costUsd:actual,inputTokens:response.usage.input_tokens,outputTokens:response.usage.output_tokens,latencyMs:Date.now()-start};
+      if(response.stop_reason!=='end_turn')throw Object.assign(new Error(`Incomplete model output (${response.stop_reason}).`),{code:'MODEL_OUTPUT_INVALID'},bill);
+      const raw=response.content.filter(x=>x.type==='text').map(x=>x.text).join('');
+      let extracted:ExtractedOrder;
+      try{extracted=ExtractedOrderSchema.parse(JSON.parse(raw));}catch(e){throw Object.assign(new Error(`Model output failed schema validation: ${e instanceof Error?e.message.slice(0,300):String(e)}`),{code:'MODEL_OUTPUT_INVALID'},bill);}
       return {extracted,usage:{id:`usage_${crypto.randomUUID()}`,orderId:this.opts.orderId,runId:this.opts.runId,mode:'live' as const,provider:'anthropic',model,modelVersion:response.model,effort:null,operation:'extraction' as const,promptHash:createHash('sha256').update(system).digest('hex'),catalogueVersion:'scale-v1',inputTokens:response.usage.input_tokens,outputTokens:response.usage.output_tokens,cacheReadTokens:response.usage.cache_read_input_tokens||0,cacheWriteTokens:response.usage.cache_creation_input_tokens||0,latencyMs:Date.now()-start,costUsd:actual,reservedUsd:reserved,pricingVersion:process.env.AI_PRICING_VERSION!,requestCount:1,retries:0,retrievedCandidateCount:0,status:'succeeded' as const,createdAt:new Date().toISOString()}};
-    }catch(e){await settleModelBudget(reservation,null);throw e;}
+    }catch(e){if(!settled)await settle(reservation,null);throw e;}
+  }
+}
+/** Google Gemini via plain REST generateContent (no SDK). Key stays in the x-goog-api-key header only. */
+export class GeminiProvider implements ExtractionProvider {
+  readonly mode='live' as const;
+  constructor(private opts:{runId:string;orderId:string;budget?:{reserve:(usd:string)=>Promise<string>;settle:(id:string,usd:string|null)=>Promise<void>}}){}
+  async extract(input:ExtractionInput){
+    if(process.env.LIVE_AI_ENABLED!=='true'||!process.env.GEMINI_API_KEY)throw Object.assign(new Error('Live AI is not configured. Offline parsing remains available.'),{code:'MODEL_UNAVAILABLE'});
+    const model=process.env.EXTRACTION_MODEL||'gemini-3.5-flash-lite';
+    if(!['gemini-3.5-flash-lite','gemini-3.1-flash-lite','gemini-3.8-flash'].includes(model))throw new Error('Model is not on the explicitly configured allowlist.');
+    const inRate=process.env.AI_INPUT_USD_PER_MILLION;const outRate=process.env.AI_OUTPUT_USD_PER_MILLION;
+    if(!inRate||!outRate||!process.env.AI_PRICING_VERSION)throw Object.assign(new Error('Set verified model pricing and pricing version before enabling live AI.'),{code:'MODEL_UNAVAILABLE'});
+    const system=await readFile(resolve(process.cwd(),'prompts/order-interpreter.md'),'utf8');
+    const schema=zodOutputFormat(ExtractedOrderSchema).schema;
+    const content=JSON.stringify({text:input.text,documents:input.documents.map(d=>({id:d.id,filename:d.filename})),evidence:input.evidence});
+    const maxInput=Buffer.byteLength(content+system+JSON.stringify(schema))+2048;const maxOutput=8192;
+    const reserved=new Decimal(maxInput).mul(inRate).add(new Decimal(maxOutput).mul(outRate)).div(1e6).toFixed(6);
+    const reserve=this.opts.budget?.reserve??((usd:string)=>reserveModelBudget(this.opts.runId,this.opts.orderId,usd,process.env.AI_RUN_BUDGET_USD||'5.00',process.env.AI_ORDER_BUDGET_USD||'0.10'));
+    const settle=this.opts.budget?.settle??settleModelBudget;
+    const reservation=await reserve(reserved);let settled=false;const start=Date.now();
+    try {
+      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{method:'POST',signal:AbortSignal.timeout(60000),
+        headers:{'content-type':'application/json','x-goog-api-key':process.env.GEMINI_API_KEY},
+        body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts:[{text:content}]}],generationConfig:{responseMimeType:'application/json',responseJsonSchema:schema,maxOutputTokens:maxOutput}})});
+      if(!res.ok)throw Object.assign(new Error(`Gemini HTTP ${res.status}: ${(await res.text()).slice(0,400)}`),{code:'MODEL_UNAVAILABLE',status:res.status});
+      const body=await res.json() as any;const u=body.usageMetadata||{};
+      // Thinking tokens bill at the output rate and are reported separately from candidatesTokenCount.
+      const inTok=u.promptTokenCount||0,outTok=(u.candidatesTokenCount||0)+(u.thoughtsTokenCount||0);
+      const actual=new Decimal(inTok).mul(inRate).add(new Decimal(outTok).mul(outRate)).div(1e6).toFixed(6);
+      await settle(reservation,actual);settled=true;
+      const bill={costUsd:actual,inputTokens:inTok,outputTokens:outTok,latencyMs:Date.now()-start};
+      const cand=body.candidates?.[0];
+      if(!cand||cand.finishReason!=='STOP')throw Object.assign(new Error(`Incomplete model output (${cand?.finishReason||body.promptFeedback?.blockReason||'no candidate'}).`),{code:'MODEL_OUTPUT_INVALID'},bill);
+      const raw=(cand.content?.parts||[]).filter((x:any)=>!x.thought&&typeof x.text==='string').map((x:any)=>x.text).join('');
+      let extracted:ExtractedOrder;
+      try{extracted=ExtractedOrderSchema.parse(JSON.parse(raw));}catch(e){throw Object.assign(new Error(`Model output failed schema validation: ${e instanceof Error?e.message.slice(0,300):String(e)}`),{code:'MODEL_OUTPUT_INVALID'},bill);}
+      return {extracted,usage:{id:`usage_${crypto.randomUUID()}`,orderId:this.opts.orderId,runId:this.opts.runId,mode:'live' as const,provider:'google',model,modelVersion:body.modelVersion||model,effort:null,operation:'extraction' as const,promptHash:createHash('sha256').update(system).digest('hex'),catalogueVersion:'scale-v1',inputTokens:inTok,outputTokens:outTok,cacheReadTokens:u.cachedContentTokenCount||0,cacheWriteTokens:0,latencyMs:bill.latencyMs,costUsd:actual,reservedUsd:reserved,pricingVersion:process.env.AI_PRICING_VERSION!,requestCount:1,retries:0,retrievedCandidateCount:0,status:'succeeded' as const,createdAt:new Date().toISOString()}};
+    }catch(e){if(!settled)await settle(reservation,null);throw e;}
   }
 }
 export function createProvider(opts?:{runId?:string;orderId?:string}):ExtractionProvider {
-  return process.env.LIVE_AI_ENABLED==='true'?new LiveProvider({runId:opts?.runId||'manual-run',orderId:opts?.orderId||'unassigned'}):new MockProvider();
+  if(process.env.LIVE_AI_ENABLED!=='true')return new MockProvider();
+  const o={runId:opts?.runId||'manual-run',orderId:opts?.orderId||'unassigned'};
+  return process.env.AI_PROVIDER==='gemini'?new GeminiProvider(o):new LiveProvider(o);
 }

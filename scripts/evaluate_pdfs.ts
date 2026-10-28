@@ -4,11 +4,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { DocumentEvidence, ExtractedLine } from '../packages/contracts/index';
 import { MockProvider } from '../packages/ai/index';
+import type { ExtractionProvider } from '../packages/contracts/index';
 import { parseInput } from '../packages/ingestion/index';
 
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 type ExpectedLine={sku:string;quantity:string;unit:string;quoted_unit_price_gbp:string};
-type PdfCase={id:string;layout:number;pdf:string;email:string;sha256:string;expected_lines:ExpectedLine[]};
+export type PdfCase={id:string;layout:number;pdf:string;email:string;sha256:string;expected_lines:ExpectedLine[]};
 type MeasuredLine={id:string;sku:string|null;quantity:string|null;unit:string|null;quotedUnitPrice:string|null;rawText:string;evidenceIds:string[];evidencePages:Array<number|null>;evidenceQuotes:string[]};
 export type PdfCaseResult={id:string;layout:number;inputSha256:string;emailSha256:string;latencyMs:number;status:'evaluated'|'error';
   pageCount:number|null;expectedLineCount:number;actualLineCount:number;expectedLines:ExpectedLine[];actualLines:MeasuredLine[];
@@ -55,7 +56,7 @@ export function scorePdfCase(expected:ExpectedLine[],actual:MeasuredLine[],pageE
   return counts;
 }
 
-async function runCase(c:PdfCase,provider:MockProvider):Promise<PdfCaseResult>{
+export async function runCase(c:PdfCase,provider:ExtractionProvider):Promise<PdfCaseResult>{
   const start=performance.now(),email=await readFile(path.join(ROOT,c.email)),expectedPdfHash=c.sha256;
   const result:PdfCaseResult={id:c.id,layout:c.layout,inputSha256:expectedPdfHash,emailSha256:sha(email),latencyMs:0,status:'error',pageCount:null,
     expectedLineCount:c.expected_lines.length,actualLineCount:0,expectedLines:c.expected_lines,actualLines:[],counts:{

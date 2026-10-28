@@ -4,12 +4,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Address, Customer, ExtractedOrder, PriceAgreement, Product, StockSnapshot } from '../packages/contracts/index';
 import { MockProvider } from '../packages/ai/index';
+import type { ExtractionProvider } from '../packages/contracts/index';
 import { validate } from '../packages/domain/index';
 import { parseInput } from '../packages/ingestion/index';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const AS_OF = '2026-11-02T09:00:00+00:00';
-type Fixture = {
+export type Fixture = {
   id: string; title: string; email_path: string; received_at: string;
   setup: Record<string, any>;
   expected: { intent: string; route: string; required_flags: string[]; lines: Array<{sku:string|null;quantity:string|null;unit:string|null}>; customer_id: string|null };
@@ -46,7 +47,7 @@ export function unsupportedSetup(setup:Record<string,any>):string[] {
 
 function sha(text:Buffer|string):string { return createHash('sha256').update(text).digest('hex'); }
 
-async function runCase(c:Fixture, reference:any, provider:MockProvider):Promise<CaseEvaluation> {
+export async function runCase(c:Fixture, reference:any, provider:ExtractionProvider):Promise<CaseEvaluation> {
   const start=performance.now();
   const email=await readFile(path.join(ROOT,c.email_path));
   const unsupported=unsupportedSetup(c.setup||{});

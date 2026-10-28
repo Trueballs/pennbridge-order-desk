@@ -165,7 +165,7 @@ export async function validate(extracted: ExtractedOrder, context: ValidationCon
       const agreements = customer ? await context.repository.prices(customer.id,selected.id) : [];
       const day = context.at.slice(0,10);
       const valid = agreements.filter(a => a.validFrom <= day && (!a.validTo || a.validTo >= day) && new Decimal(source.quantity!).gte(a.minimumQuantity)).sort((a,b)=>new Decimal(b.minimumQuantity).cmp(a.minimumQuantity));
-      if (agreements.length && !valid.length && source.quotedUnitPrice!==null) warnings.push(reason("EXPIRED_PRICE_AGREEMENT","No current applicable agreement; list price is shown for explicit review",source.id));
+      if (agreements.length && !valid.length && source.quotedUnitPrice!==null) warnings.push(reason("EXPIRED_PRICE_AGREEMENT","No agreement applies at this date and quantity (expired, not yet valid or below tier minimum); list price is shown for explicit review",source.id));
       unitPrice = valid[0]?.unitPrice ?? selected.listPrice; agreementVersion = valid[0]?.version ?? `list:${selected.catalogueVersion}`;
       lineTotal = money(new Decimal(source.quantity).mul(unitPrice));
       if (source.quotedUnitPrice !== null && new Decimal(source.quotedUnitPrice).sub(unitPrice).abs().gt("0.01")) warnings.push(reason("PRICE_MISMATCH",`Source price £${source.quotedUnitPrice}; current master price £${unitPrice}`,source.id));

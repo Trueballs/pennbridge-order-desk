@@ -2,6 +2,8 @@
 
 Local portfolio prototype for a fictional UK industrial wholesaler. It turns synthetic emailed purchase orders into reviewable drafts, checks catalogue and account data, records human approval, and prepares a CSV for quotation import into a local Odoo test instance.
 
+Demo walkthrough, pre-demo checklist and interview notes: [docs/DEMO.md](docs/DEMO.md).
+
 ## Run the local demo
 
 Requirements: Docker Desktop and Node.js 24. The first Compose build downloads pinned images and dependencies.

@@ -65,6 +65,36 @@ The separate 20-case suite uses the synthetic machine-generated PDFs and the pro
 
 Run `npx tsx scripts/evaluate_pdfs.ts` to refresh `results/acceptance/pdf-run.json` and `pdf-run.md`. It verifies the PDF content hash declared in `fixtures/pdf/cases.json`. Missing quoted prices count as misses; labels are not supplied to the parser. Page evidence is checked separately from line-field correctness.
 
+## Live AI benchmark
+
+`scripts/evaluate_live.ts` runs a real model over the same 50 email and 20 PDF fixtures, using the same parsing, domain validation and scoring code as the offline evaluators (it imports their `runCase`). It is the only path that makes paid calls, and its output is labelled live-model results. The fixtures are visible synthetic data, not a holdout.
+
+```sh
+npm run eval:live -- --dry-run                       # no network; case count and cost range
+export GEMINI_API_KEY=...                             # in the shell only; never in a file
+npm run eval:live -- --provider gemini --limit 3      # smoke test: 3 email + 3 PDF cases
+npm run eval:live -- --provider gemini                # full run
+# Anthropic instead: export ANTHROPIC_API_KEY=...; npm run eval:live (default) or -- --model claude-sonnet-5-5
+```
+
+Options: `--provider anthropic|gemini` (or `AI_PROVIDER`), `--model`, `--limit N` (per suite), `--dry-run` (also the default when the provider's key is unset). `AI_RUN_BUDGET_USD` (default 2.00) is a hard cap: before each call the worst-case cost (conservative byte-based reservation) is checked and the run stops when it would exceed the cap. The run also stops on the first HTTP 4xx other than 429 (bad key, model or schema), since every later case would fail the same way. Concurrency is 2. Keys are read from the environment only and error text is redacted.
+
+Output goes to `results/live/run-<timestamp>.json` (per-case pass/fail per field, API latency, tokens, cost) and `.md` (accuracy by field, failure list, p50/p95 latency, total and per-order cost). Model errors (refusal, truncation, invalid JSON, schema failure) count as failures, not exclusions. Cases that need unmodelled order-history state are shown as diagnostic and excluded from the email denominator, as in the offline run.
+
+Models and prices (USD per 1M tokens, standard tier, text; override with `AI_INPUT_USD_PER_MILLION` / `AI_OUTPUT_USD_PER_MILLION`):
+
+| Provider / model | Input | Output | Source |
+|---|---|---|---|
+| anthropic / `claude-haiku-5-5` (default) | 0.10 | 0.50 | claude-api skill model table, cached 2026-10-06 (prompts up to 100K tokens) |
+| anthropic / `claude-sonnet-5-5` | 2.00 | 10.00 | same |
+| gemini / `gemini-3.5-flash-lite` (default) | 0.30 | 2.50 | https://ai.google.dev/gemini-api/docs/pricing, fetched 2026-10-28; output includes thinking tokens |
+| gemini / `gemini-3.1-flash-lite` | 0.25 | 1.50 | same |
+| gemini / `gemini-3.8-flash` | 0.75 | 3.75 | same; promotional through 2026-12-31, then 1.50 / 7.50 |
+
+Dry-run estimate (70 cases, heuristic from byte counts, no network): Haiku 5.5 about $0.04-$0.17 in total ($0.0006-$0.0024 per order); Gemini 3.5 Flash-Lite about $0.16-$0.77 ($0.0023-$0.011 per order); about 196k-313k input and 40k-272k output tokens. The high end assumes thinking tokens. These are estimates only; the live run records measured tokens and cost.
+
+Unverified before the first paid call: the Gemini request uses `generationConfig.responseJsonSchema` with `responseMimeType: application/json`, and the current docs pages retrieved only confirmed `responseMimeType`/`responseSchema` for generateContent. If Google rejects the field, the run stops at the first case with the error body. Anthropic structured output uses `output_config.format` with a schema normalized by the SDK's `zodOutputFormat`.
+
 ## What these results establish
 
 These are visible synthetic development cases, not an untouched holdout. The 42-case email run is a parser/domain acceptance diagnostic; the separate 8-case run measures stateful service behavior with mock extraction and PostgreSQL; the PDF run measures machine-generated PDF text extraction plus deterministic mock parsing and source evidence references. None is AI accuracy, a production accuracy estimate, or a real-customer outcome. Scanned PDFs/OCR are not evaluated. No live AI call or paid API usage is included.
