@@ -1,0 +1,46 @@
+name: pennbridge-odoo-proof
+services:
+  odoo-db:
+    image: postgres:17@sha256:31ba9c94a03ada9988f2bb493a22a75eef3a185884533e5cdbcd498ea835b08f
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: pennbridge
+      POSTGRES_PASSWORD: pennbridge-local-db-only
+    volumes:
+      - odoo-db-data:/var/lib/postgresql/data
+    networks: [odoo-private]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U pennbridge -d postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  odoo:
+    image: odoo:19.0@sha256:27f920e002c43a1af7022a68f3cc17db71a2f9f3348800cb050721ce54893e49
+    depends_on:
+      odoo-db:
+        condition: service_healthy
+    environment:
+      HOST: odoo-db
+      USER: pennbridge
+      PASSWORD: pennbridge-local-db-only
+    command: [odoo, --database=pennbridge, --without-demo]
+    volumes:
+      - odoo-data:/var/lib/odoo
+      - ./odoo/odoo.conf:/etc/odoo/odoo.conf:ro
+      - ./odoo:/mnt/proof:ro
+      - ../fixtures/scale:/mnt/fixtures-scale:ro
+    networks: [odoo-private]
+  odoo-web:
+    image: nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236
+    depends_on: [odoo]
+    ports: ['127.0.0.1:8067:80']
+    volumes:
+      - ./odoo/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [odoo-private, odoo-ingress]
+networks:
+  odoo-ingress: {}
+  odoo-private:
+    internal: true
+volumes:
+  odoo-db-data:
+  odoo-data:

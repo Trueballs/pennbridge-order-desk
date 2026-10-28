@@ -1,0 +1,1958 @@
+[
+  {
+    "id": "PDF-001",
+    "synthetic": true,
+    "layout": 1,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-001.pdf",
+    "email": "fixtures/pdf/PDF-001.eml",
+    "sha256": "f4d5687d632d78d3661aec3661488b010544baf54f3230067ccb435c39d3d047",
+    "expected_lines": [
+      {
+        "sku": "FB-0830-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "4",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "PDF-002",
+    "synthetic": true,
+    "layout": 2,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-002.pdf",
+    "email": "fixtures/pdf/PDF-002.eml",
+    "sha256": "e5a04f94dcd1a6a9c2728500ae629f51fc0cde98b8ff84f382a86e6769d66739",
+    "expected_lines": [
+      {
+        "sku": "FB-0830-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "4",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "PDF-003",
+    "synthetic": true,
+    "layout": 3,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-003.pdf",
+    "email": "fixtures/pdf/PDF-003.eml",
+    "sha256": "d9fb0713517ac89450d19e0b3c2bfe8c9623bfeec6a680d1552f42e7cd10ac85",
+    "expected_lines": [
+      {
+        "sku": "FB-0830-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "4",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "PDF-004",
+    "synthetic": true,
+    "layout": 4,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-004.pdf",
+    "email": "fixtures/pdf/PDF-004.eml",
+    "sha256": "5aeaac3c41a56d4cf4c3d9da0d84d7185eda3256885e0146ac54b9f213e98b1e",
+    "expected_lines": [
+      {
+        "sku": "FB-0830-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "4",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "PDF-005",
+    "synthetic": true,
+    "layout": 1,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-005.pdf",
+    "email": "fixtures/pdf/PDF-005.eml",
+    "sha256": "bb1bde209fd178dfe79a3d5329cdc203674bf9c0596f0b5f33789c60ed344ee3",
+    "expected_lines": [
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      }
+    ]
+  },
+  {
+    "id": "PDF-006",
+    "synthetic": true,
+    "layout": 2,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-006.pdf",
+    "email": "fixtures/pdf/PDF-006.eml",
+    "sha256": "25b177d5d9430277bfa12775ef68f5abb0d6ba9440ab703b6fb1a95578e91b8e",
+    "expected_lines": [
+      {
+        "sku": "FB-0830-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "4",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "PDF-007",
+    "synthetic": true,
+    "layout": 3,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-007.pdf",
+    "email": "fixtures/pdf/PDF-007.eml",
+    "sha256": "5fd547be9650106d7fda61e82bd55f5862ef27651cda78e8957b2dabbf98ccad",
+    "expected_lines": [
+      {
+        "sku": "FB-0835-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "13.00"
+      },
+      {
+        "sku": "OR-20X3-FKM",
+        "quantity": "10",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.10"
+      }
+    ]
+  },
+  {
+    "id": "PDF-008",
+    "synthetic": true,
+    "layout": 4,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-008.pdf",
+    "email": "fixtures/pdf/PDF-008.eml",
+    "sha256": "60e98c3f219208eaadbd057c6c276ec05db407896acea85ebd7692a850e0af9e",
+    "expected_lines": [
+      {
+        "sku": "FB-0830-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "4",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "PDF-009",
+    "synthetic": true,
+    "layout": 1,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-009.pdf",
+    "email": "fixtures/pdf/PDF-009.eml",
+    "sha256": "6e5a3d1d4117ae9f4e1207f46e5a6992412aa2c825b2e5f9c671fb9ae28ec205",
+    "expected_lines": [
+      {
+        "sku": "FB-0830-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "4",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "PDF-010",
+    "synthetic": true,
+    "layout": 2,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-010.pdf",
+    "email": "fixtures/pdf/PDF-010.eml",
+    "sha256": "d4bfc7e4edafc363ef43a750aa6125951090a5df2d3943b5d44cb2c28f2756bd",
+    "expected_lines": [
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      }
+    ]
+  },
+  {
+    "id": "PDF-011",
+    "synthetic": true,
+    "layout": 3,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-011.pdf",
+    "email": "fixtures/pdf/PDF-011.eml",
+    "sha256": "19c6b4ec9443ad08fb6852cf006720fc708ab45bb41c40880e657a2b8381fb00",
+    "expected_lines": [
+      {
+        "sku": "FB-0835-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "13.00"
+      },
+      {
+        "sku": "OR-20X3-FKM",
+        "quantity": "10",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.10"
+      }
+    ]
+  },
+  {
+    "id": "PDF-012",
+    "synthetic": true,
+    "layout": 4,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-012.pdf",
+    "email": "fixtures/pdf/PDF-012.eml",
+    "sha256": "b9ec0bcec8e3605571c0447b0922f089aff9b42791f33fc0adb1202b7671d23f",
+    "expected_lines": [
+      {
+        "sku": "FB-0830-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "4",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "PDF-013",
+    "synthetic": true,
+    "layout": 1,
+    "customer_id": "C001",
+    "shipping_address": "NORTH",
+    "pdf": "fixtures/pdf/PDF-013.pdf",
+    "email": "fixtures/pdf/PDF-013.eml",
+    "sha256": "95ec160523a23e441f12ea949a2458b6f834c078f0732b43199cb6b37496d86a",
+    "expected_lines": [
+      {
+        "sku": "FB-0830-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "4",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "PDF-014",
+    "synthetic": true,
+    "layout": 2,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-014.pdf",
+    "email": "fixtures/pdf/PDF-014.eml",
+    "sha256": "76c64ff7d450b2f1aa0e592dd9094816547663d0bf9d41d689745910efda7dd6",
+    "expected_lines": [
+      {
+        "sku": "FB-0830-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "4",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "PDF-015",
+    "synthetic": true,
+    "layout": 3,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-015.pdf",
+    "email": "fixtures/pdf/PDF-015.eml",
+    "sha256": "d21932628673e72b671bafcdb38a616db77275d909173cdd58ea6db136c4ea17",
+    "expected_lines": [
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      }
+    ]
+  },
+  {
+    "id": "PDF-016",
+    "synthetic": true,
+    "layout": 4,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-016.pdf",
+    "email": "fixtures/pdf/PDF-016.eml",
+    "sha256": "7d4a8c1ad0c5c4bfaba5cdb0a5348f4e0835a356fe7caae99a2ee6a092da7826",
+    "expected_lines": [
+      {
+        "sku": "FB-0830-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "4",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "PDF-017",
+    "synthetic": true,
+    "layout": 1,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-017.pdf",
+    "email": "fixtures/pdf/PDF-017.eml",
+    "sha256": "ecfb22f389ad906a80101db555b6b360399f4bfdb4c558cea8baac22e3a892ad",
+    "expected_lines": [
+      {
+        "sku": "FB-0830-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "4",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "PDF-018",
+    "synthetic": true,
+    "layout": 2,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-018.pdf",
+    "email": "fixtures/pdf/PDF-018.eml",
+    "sha256": "919e370d3d1e8da2f2d0a949bba76b55926dd49c1931b42a1bde1c82f260d2a0",
+    "expected_lines": [
+      {
+        "sku": "FB-0830-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "4",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "PDF-019",
+    "synthetic": true,
+    "layout": 3,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-019.pdf",
+    "email": "fixtures/pdf/PDF-019.eml",
+    "sha256": "e7675c5a0e8509450f8288ffd197d7b8e81322d08e305ae5e36bcd161b8ded62",
+    "expected_lines": [
+      {
+        "sku": "FB-0830-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "4",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "PDF-020",
+    "synthetic": true,
+    "layout": 4,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/pdf/PDF-020.pdf",
+    "email": "fixtures/pdf/PDF-020.eml",
+    "sha256": "980808cad96a1d86c81ae6a930ccce107e5746adb8f8a96d384649538114fef2",
+    "expected_lines": [
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "1",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "3",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      }
+    ]
+  }
+]

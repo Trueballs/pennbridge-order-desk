@@ -1,0 +1,4 @@
+# Preserve MIME fixture bytes/checksums and accept protocol CRLF endings.
+*.eml -text whitespace=cr-at-eol
+*.pdf binary
+*.csv -text whitespace=cr-at-eol

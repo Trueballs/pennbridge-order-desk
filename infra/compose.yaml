@@ -1,0 +1,63 @@
+name: pennbridge-dev
+services:
+  db:
+    image: postgres:17@sha256:31ba9c94a03ada9988f2bb493a22a75eef3a185884533e5cdbcd498ea835b08f
+    environment:
+      POSTGRES_USER: pennbridge
+      POSTGRES_PASSWORD: pennbridge-local
+      POSTGRES_DB: pennbridge
+    volumes: [desk-db:/var/lib/postgresql/data]
+    networks: [private]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U pennbridge -d pennbridge']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  mailpit:
+    image: axllent/mailpit:v1.27.10
+    environment:
+      MP_MAX_MESSAGES: '1000'
+      MP_DATABASE: /data/mailpit.db
+    volumes: [desk-mail:/data]
+    networks: [private]
+  app:
+    build: {context: .., dockerfile: infra/Dockerfile}
+    image: pennbridge-app:local
+    command: [npm, run, start]
+    depends_on:
+      db: {condition: service_healthy}
+    environment: &app-env
+      DATABASE_URL: postgresql://pennbridge:pennbridge-local@db:5432/pennbridge
+      PROJECT_ROOT: /app
+      STORAGE_ROOT: /app/runtime/storage
+      LIVE_AI_ENABLED: 'false'
+      MAILPIT_URL: http://mailpit:8025
+      SESSION_COOKIE_SECURE: 'false'
+      ODOO_UNIT_EXTERNAL_IDS: '{"each":"uom.product_uom_unit","pack":"pennbridge.uom_pack","box":"pennbridge.uom_box","pair":"pennbridge.uom_pair","roll":"pennbridge.uom_roll","metre":"uom.product_uom_meter","litre":"uom.product_uom_litre","kg":"uom.product_uom_kgm"}'
+    volumes: [desk-storage:/app/runtime/storage]
+    networks: [private]
+  worker:
+    image: pennbridge-app:local
+    command: [npm, run, worker]
+    depends_on:
+      db: {condition: service_healthy}
+    environment: *app-env
+    volumes: [desk-storage:/app/runtime/storage]
+    networks: [private]
+  proxy:
+    image: nginx:1.29.3-alpine
+    depends_on: [app, mailpit]
+    ports: ['127.0.0.1:3087:3087', '127.0.0.1:8027:8027']
+    volumes: ['./proxy.conf:/etc/nginx/nginx.conf:ro']
+    networks: [private, web]
+    read_only: true
+    tmpfs: [/var/cache/nginx, /var/run]
+networks:
+  private: {internal: true}
+  web:
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: 'false'
+volumes:
+  desk-db:
+  desk-storage:
+  desk-mail:

@@ -1,0 +1,3 @@
+id,partner_id/id,client_order_ref,currency_id/id,order_line/id,order_line/product_id/id,order_line/name,order_line/product_uom_qty,order_line/product_uom_id/id,order_line/price_unit
+pennbridge.quote_proof,pennbridge.customer_proof,PO-PROOF-001,base.GBP,pennbridge.quote_proof_line_1,pennbridge.product_bolt,M8 bolt synthetic unit,10.0,uom.product_uom_unit,1.25
+,,,,pennbridge.quote_proof_line_2,pennbridge.product_bearing,6204 bearing synthetic unit,2.0,uom.product_uom_unit,8.5

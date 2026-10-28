@@ -1,0 +1,87 @@
+{
+  "mapping_version": "odoo19-quotation-v2",
+  "fields": [
+    "id",
+    "partner_id/id",
+    "partner_shipping_id/id",
+    "client_order_ref",
+    "currency_id/id",
+    "order_line/id",
+    "order_line/product_id/id",
+    "order_line/name",
+    "order_line/product_uom_qty",
+    "order_line/product_uom_id/id",
+    "order_line/price_unit"
+  ],
+  "test": {
+    "ids": [
+      4
+    ],
+    "messages": [],
+    "nextrow": 0,
+    "name": []
+  },
+  "import": {
+    "ids": [
+      5
+    ],
+    "messages": [],
+    "nextrow": 0,
+    "name": []
+  },
+  "repeat": {
+    "ids": [
+      5
+    ],
+    "messages": [],
+    "nextrow": 0,
+    "name": []
+  },
+  "quote": {
+    "id": 5,
+    "name": "S00005",
+    "state": "draft",
+    "partner_external_id": "pennbridge.partner_C001",
+    "shipping_external_id": "pennbridge.address_C001_NORTH",
+    "shipping_street": "Unit 8, North Test Works, Reading, TEST RG2",
+    "line_ids": [
+      7,
+      8
+    ],
+    "first_line": {
+      "product_external_id": "pennbridge.product_FB-0830-A2-100",
+      "sku": "FB-0830-A2-100",
+      "quantity": 2.0,
+      "unit": "Pack (selling unit)",
+      "price": 10.0
+    }
+  },
+  "export_template": [
+    [
+      "pennbridge.quote_shipping_proof",
+      "pennbridge.partner_C001",
+      "pennbridge.address_C001_NORTH",
+      "PO-SHIPPING-PROOF",
+      "base.GBP",
+      "pennbridge.quote_shipping_line_1",
+      "pennbridge.product_FB-0830-A2-100",
+      "M8 x 30 mm A2 stainless hex bolt, pack 100",
+      2.0,
+      "pennbridge.uom_pack",
+      10.0
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "pennbridge.quote_shipping_line_2",
+      "pennbridge.product_BR-6204-2RS",
+      "6204 bearing synthetic catalogue",
+      3.0,
+      "uom.product_uom_unit",
+      7.5
+    ]
+  ]
+}

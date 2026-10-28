@@ -1,0 +1,144 @@
+{
+  "version": "19.0-20261015",
+  "fields": [
+    "id",
+    "partner_id/id",
+    "client_order_ref",
+    "currency_id/id",
+    "order_line/id",
+    "order_line/product_id/id",
+    "order_line/name",
+    "order_line/product_uom_qty",
+    "order_line/product_uom_id/id",
+    "order_line/price_unit"
+  ],
+  "test": {
+    "ids": [
+      1
+    ],
+    "messages": [],
+    "nextrow": 0,
+    "name": []
+  },
+  "import": {
+    "ids": [
+      2
+    ],
+    "messages": [],
+    "nextrow": 0,
+    "name": []
+  },
+  "repeat": {
+    "ids": [
+      2
+    ],
+    "messages": [],
+    "nextrow": 0,
+    "name": []
+  },
+  "invalid": {
+    "ids": false,
+    "messages": [
+      {
+        "rows": {
+          "from": 0,
+          "to": 1
+        },
+        "type": "error",
+        "record": 0,
+        "field": "order_line",
+        "message": "No matching record found for external id 'pennbridge.product_does_not_exist' in field 'Order Lines/Product'",
+        "moreinfo": {
+          "name": "Possible Values",
+          "type": "ir.actions.act_window",
+          "target": "new",
+          "view_mode": "list,form",
+          "views": [
+            [
+              false,
+              "list"
+            ],
+            [
+              false,
+              "form"
+            ]
+          ],
+          "context": {
+            "create": false
+          },
+          "help": "See all possible values",
+          "res_model": "ir.model.data",
+          "domain": [
+            [
+              "model",
+              "=",
+              "product.product"
+            ]
+          ]
+        },
+        "value": "pennbridge.product_does_not_exist",
+        "field_type": "external id",
+        "field_path": [
+          "order_line",
+          "product_id",
+          "id"
+        ],
+        "field_name": "Order Lines"
+      }
+    ],
+    "nextrow": 0,
+    "name": []
+  },
+  "quote": {
+    "id": 2,
+    "name": "S00002",
+    "state": "draft",
+    "customer": "Northbank Engineering (Synthetic)",
+    "currency": "GBP",
+    "po": "PO-PROOF-001",
+    "line_ids": [
+      3,
+      4
+    ],
+    "lines": [
+      {
+        "product": "PB-BOLT-M8",
+        "quantity": 10.0,
+        "unit": "Units",
+        "price": 1.25
+      },
+      {
+        "product": "PB-BEAR-6204",
+        "quantity": 2.0,
+        "unit": "Units",
+        "price": 8.5
+      }
+    ]
+  },
+  "export_template": [
+    [
+      "pennbridge.quote_proof",
+      "pennbridge.customer_proof",
+      "PO-PROOF-001",
+      "base.GBP",
+      "pennbridge.quote_proof_line_1",
+      "pennbridge.product_bolt",
+      "M8 bolt synthetic unit",
+      10.0,
+      "uom.product_uom_unit",
+      1.25
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "pennbridge.quote_proof_line_2",
+      "pennbridge.product_bearing",
+      "6204 bearing synthetic unit",
+      2.0,
+      "uom.product_uom_unit",
+      8.5
+    ]
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "lib": ["dom", "dom.iterable", "es2022"],
+    "allowJs": true, "skipLibCheck": true, "strict": true, "noEmit": true,
+    "esModuleInterop": true, "module": "esnext", "moduleResolution": "bundler",
+    "resolveJsonModule": true, "isolatedModules": true, "jsx": "react-jsx",
+    "baseUrl": ".", "paths": {"@/*": ["apps/web/*"], "@pennbridge/*": ["packages/*"]},
+    "plugins": [{"name": "next"}]
+  },
+  "include": ["apps/**/*.ts", "apps/**/*.tsx", "packages/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts"],
+  "exclude": ["node_modules", "apps/web/.next", "runtime", "results"]
+}

@@ -1,0 +1,42 @@
+{
+  "synthetic": true,
+  "schema_version": 1,
+  "seed": 20261028,
+  "counts": {
+    "skus": 10000,
+    "active_skus": 8000,
+    "discontinued_skus": 2000,
+    "accounts": 250,
+    "addresses": 500,
+    "aliases": 5000,
+    "price_agreements": 15000,
+    "historical_orders": 12000,
+    "historical_order_lines": 102000
+  },
+  "files": {
+    "catalogue.json": {
+      "sha256": "f8985a38b904d51f7f33f10d279acadd773bf87d7efedad4aa049a1edad67522",
+      "bytes": 4469555
+    },
+    "accounts.json": {
+      "sha256": "da6507d7a2b388e98388184ac09838eaa03467d4bfd1419e45901350a976b93b",
+      "bytes": 73251
+    },
+    "addresses.json": {
+      "sha256": "0b81c758ed373f7d647efe425c822d7fa4b54652480d5a9d3cfa13d2920889ee",
+      "bytes": 100731
+    },
+    "aliases.json": {
+      "sha256": "1c0921cbc91233ca5ff5b66fa244c5269f0f8f7ad6d0a1ab6441a518883727f9",
+      "bytes": 814862
+    },
+    "price_agreements.json": {
+      "sha256": "ccfff689e8e1de31e0146a17345572686a6733cd6db4229dc816fae6bda24339",
+      "bytes": 3780226
+    },
+    "history_orders.json": {
+      "sha256": "fd5a65f8715e72e64c0ae521dd6795d4393e4f60ab6b4a3d9ec3b037775c5cf2",
+      "bytes": 16037599
+    }
+  }
+}

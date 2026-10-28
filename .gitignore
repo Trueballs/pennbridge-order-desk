@@ -9,3 +9,8 @@ node_modules/
 __pycache__/
 *.pyc
 .DS_Store
+*.tsbuildinfo
+apps/web/.next/
+playwright-report/
+test-results/
+.venv/

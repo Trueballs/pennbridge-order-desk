@@ -1,8 +1,29 @@
 # Pennbridge Order Desk — build and agent execution plan
 
-Prepared 28 October 2026. **Planning only. Awaiting Oscar's “go.”**
+Prepared and executed 28 October 2026. **Local mock-mode build implemented and evaluated.**
 
-This is the canonical execution plan. It implements the research correction in PROJECT-SPEC.md and takes precedence over that document's older milestone order. The specification remains the source for business rules; this document defines implementation order, owners, model selection and completion gates. No application code, containers or paid AI calls were created by this planning task.
+This is the canonical execution plan. It implements the research correction in PROJECT-SPEC.md and takes precedence over that document's older milestone order. The specification remains the source for business rules; this document defines implementation order, owners, model selection and completion gates. The original phase descriptions below record the approved plan. The status table here takes precedence over their prospective wording. No paid live AI calls were made.
+
+## Execution status — 28 October 2026
+
+| Area | Delivered / evidence |
+|---|---|
+| A — contracts and destination | Versioned contracts; actual Odoo 19 Test/Import/reimport service proof, including an app-generated CSV |
+| B — isolated infrastructure and data | Local Docker app/worker/PostgreSQL/Mailpit; separate Odoo; 10k SKUs, 250 accounts, 500 addresses, 15k agreements; all master records seeded/read back in Odoo |
+| C — review workflow | Login/roles, source/PDF preview, editable quantities and selling units, line exceptions, version-bound approval, stable CSV export, manual destination-verification record |
+| D — ingestion and lookup | MIME, text/HTML, machine-generated PDF, strict standalone CSV; exact identifiers/account aliases then bounded lexical candidates; deterministic mock plus guarded live provider adapter |
+| E — operations/review | Mailpit capture/retrieval demo; durable jobs/leases; independent targeted review and fixes; no external mail or public hosting |
+| F — evaluated local release | Original50 across42 stateless +8 PostgreSQL stateful tests;20 PDF cases/286 lines;20 core regressions; lookup/roles/recovery/DB+storage restore/network checks in EVALUATION.md and SYSTEM-CHECKS.md |
+| G — handover | README runbook, Odoo import guide, measured portfolio bullet, local working demo |
+
+Implementation choices and remaining limits:
+- Initial Odoo/desk master consistency is verified from a shared synthetic seed. Continuous Odoo-to-desk change synchronization is not implemented.
+- SQL/domain code performs retrieval. No second LLM matching agent or vector database is needed for this release. The draft prompt describes the future bounded matching contract; the live extraction adapter is present but unbenchmarked.
+- Default Docker networks deny worker outbound access. Live AI needs a deliberately configured provider connection, dedicated key, current model/pricing verification and budget; it is not enabled by simply changing the UI.
+- The70 email/PDF scenarios are synthetic development fixtures, not a held-out accuracy benchmark. Neither real-customer production readiness nor commercial ROI is established.
+- Odoo browser upload was blocked by Chrome extension file-URL permissions. The exact app CSV passed Odoo's real import service in dry-run, import and reimport; the resulting quotation was checked in the browser. No browser permissions were expanded.
+- A narrated walkthrough recording and public portfolio publishing are not produced. The README contains a reproducible demonstration sequence.
+- Luna handled bounded data/UI/harness/docs work; Sol handled contracts, lifecycle, Odoo and critical/system review. Coordinator integrated, repaired and verified the app. Agent token/cost telemetry was not available, so no measured savings claim is made.
 
 ## 1. The finished product
 
