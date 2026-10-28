@@ -92,6 +92,17 @@ export function lineCoverage(text: string, extractedLines: number): Reason | nul
   const rows = text.match(ORDER_ROW)?.length ?? 0;
   return rows > extractedLines ? reason("INCOMPLETE_EXTRACTION",`Source has ${rows} tabular order rows but only ${extractedLines} lines were extracted; check for missing lines`) : null;
 }
+// Models quote verbatim but miscount character offsets (live Gemini, 2026-10-28). Re-anchor a verbatim quote at its
+// occurrence nearest the claimed offset; the caller still rejects any quote that is absent from the source.
+export function anchorEvidence(evidence: { documentId: string; quote: string; startOffset: number | null; endOffset: number | null }[], texts: Map<string, string | null>): void {
+  for (const e of evidence) {
+    const text = texts.get(e.documentId);
+    if (!text || !e.quote || !text.includes(e.quote) || e.startOffset === null || text.startsWith(e.quote, e.startOffset)) continue;
+    let best = -1;
+    for (let at = text.indexOf(e.quote); at !== -1; at = text.indexOf(e.quote, at + 1)) if (best === -1 || Math.abs(at - e.startOffset) < Math.abs(best - e.startOffset)) best = at;
+    e.startOffset = best; e.endOffset = best + e.quote.length;
+  }
+}
 export function applyResolutions(reasons: Reason[], resolutions: ValidationContext["resolutions"]): Reason[] {
   return reasons.map(r => {
     const resolution = resolutions?.find(v => v.code === r.code && v.lineId === r.lineId);

@@ -7,7 +7,7 @@ import type { PoolClient } from "pg";
 import { AddressSchema, ExtractedOrderSchema, IntakeRequestSchema, ReasonCodeSchema, type Address, type AmendmentRequest, type ApproveRequest, type CancelRequest, type Customer, type Document, type DocumentEvidence, type EditOrderRequest, type ExportRequest, type ExportSnapshot, type ExtractedOrder, type ExtractionProvider, type IntakeRequest, type IntakeResponse, type Job, type HistoricalSuggestion, type OrderDetail, type OrderListQuery, type OrderListResponse, type Product, type Session, type SourceMessage, type Unit, type ValidatedDraft, type VerifyExportRequest } from "@pennbridge/contracts";
 import { audit, failJob, id, jobFromRow, migrate, pool, sha256, transaction, type DbClient } from "@pennbridge/db";
 import { CATALOGUE_VERSION, seedDatabase } from "@pennbridge/db/seed";
-import { canApprove, canonicalJson, contentHash, hasUnresolved, lineCoverage, quantity, reason, ServiceError, validate, type ValidationRepository } from "@pennbridge/domain";
+import { canApprove, canonicalJson, contentHash, anchorEvidence, hasUnresolved, lineCoverage, quantity, reason, ServiceError, validate, type ValidationRepository } from "@pennbridge/domain";
 export { ServiceError } from "@pennbridge/domain";
 
 const storageRoot = path.resolve(process.env.STORAGE_ROOT ?? "runtime/storage");
@@ -341,6 +341,7 @@ export async function processMessage(job:Job,owner:string,dependencies:Processin
   const coverage=lineCoverage(parsed.text,extracted.lines.length);if(coverage)extracted.reasons.push(coverage);
   const documentsById=new Map(parsed.documents.map(d=>[d.id,d]));
   const evidenceById=new Map([...parsed.evidence,...extracted.evidence].map(e=>[e.id,e]));
+  anchorEvidence(extracted.evidence,new Map(parsed.documents.map(d=>[d.id,d.text])));
   for(const evidence of extracted.evidence) {
     const document=documentsById.get(evidence.documentId);
     if(!document || document.text===null || !document.text.includes(evidence.quote) || (evidence.startOffset!==null && evidence.endOffset!==null && (evidence.endOffset>document.text.length || !document.text.slice(evidence.startOffset,evidence.endOffset).includes(evidence.quote))))
