@@ -1,0 +1,18 @@
+From: sam@brookmere.example
+To: orders@pennbridge.example
+Subject: Order H-009
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <h-009@holdout.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Hi Pennbridge,
+
+Could you send me a price and lead time for 500 each OR-20X3-FKM and 200 each=
+ BR-6204-ZZ? Nothing to order yet, it is for next year's budget so no PO.
+
+Thanks
+Sam Whitaker
+Brookmere Maintenance

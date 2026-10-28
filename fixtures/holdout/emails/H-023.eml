@@ -1,0 +1,16 @@
+From: tom@dunvale.example
+To: orders@pennbridge.example
+Subject: Order H-023
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <h-023@holdout.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Dunvale Fabrication - PO DF-2210. Please supply 3 packs FB-0830-ZP-100, deliv=
+er MAIN.
+
+Regards
+Tom Barrett
+Dunvale Fabrication Ltd

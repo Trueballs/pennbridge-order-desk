@@ -1,0 +1,27 @@
+From: mia@alderwick.example
+To: orders@pennbridge.example
+Subject: Order H-030
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <h-030@holdout.pennbridge.example>
+X-Pennbridge-Synthetic: true
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="pennbridge-holdout-H-030"
+
+--pennbridge-holdout-H-030
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Hi, order attached - PO ALD-N-0540, delivering to NORTH. Mia
+
+--pennbridge-holdout-H-030
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="order_ALD-N-0540.txt"
+MIME-Version: 1.0
+
+Qty,Product code,Unit
+24,DISC-115-60,each
+8,TAPE-PTFE-12,roll
+2,FB-0830-A2-050,pack
+
+--pennbridge-holdout-H-030--

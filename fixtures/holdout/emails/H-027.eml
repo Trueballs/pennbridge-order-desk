@@ -1,0 +1,12 @@
+From: sam@brookmere.example
+To: orders@pennbridge.example
+Subject: Order H-027
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <h-027@holdout.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+PO BM-24-0990, MAIN. 2 packs FB-0835-A2-100 at =C2=A313.00 and 1 pack FN-M8-A=
+2-100 at =C2=A36.00 - total =C2=A330.00 net. Sam

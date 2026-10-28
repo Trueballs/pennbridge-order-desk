@@ -1,0 +1,12 @@
+From: leah@caldergate.example
+To: orders@pennbridge.example
+Subject: Order H-015
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <h-015@holdout.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+PO CP-0431 - please supply 20 each BR-6204-ZZ at GBP 4.80 each as quoted by y=
+our rep last week. Delivery MAIN. Leah

@@ -1,0 +1,14 @@
+From: mia@alderwick.example
+To: orders@pennbridge.example
+Subject: Order H-016
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <h-016@holdout.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+MIME-Version: 1.0
+
+PO ALD-8851, MAIN delivery.
+5 packs FB-0830-ZP-100
+12 FN-M8-A2-100
+Thanks - Mia

@@ -1,0 +1,152 @@
+[
+  {
+    "path": "fixtures/holdout/emails/H-001.eml",
+    "sha256": "658aedc440153f27f6891ed2eec85dc5eb9366fc8a637490267729c3a0d2ac3a",
+    "bytes": 640
+  },
+  {
+    "path": "fixtures/holdout/emails/H-002.eml",
+    "sha256": "6a32c5ca94cce93521a96cafcf4edee1445d556a2413fbadd49bb9642c5c876c",
+    "bytes": 597
+  },
+  {
+    "path": "fixtures/holdout/emails/H-003.eml",
+    "sha256": "6dd095537462722b02252cb3fbe10b4a0452112987f43276f549f94cdef14286",
+    "bytes": 584
+  },
+  {
+    "path": "fixtures/holdout/emails/H-004.eml",
+    "sha256": "bf3e5924368282b1e114788b7a6f3c8f4df65d28f88478d249281d91791d972e",
+    "bytes": 461
+  },
+  {
+    "path": "fixtures/holdout/emails/H-005.eml",
+    "sha256": "82f3a7dfde128fcffa4368b4356e47b2f3b12b98449c30ed5eb235318bd852ee",
+    "bytes": 906
+  },
+  {
+    "path": "fixtures/holdout/emails/H-006.eml",
+    "sha256": "80228e23fec8473310c2004a1d6e7e3ca64f4032fb5991d2a5feb4d711a45fdb",
+    "bytes": 705
+  },
+  {
+    "path": "fixtures/holdout/emails/H-007.eml",
+    "sha256": "fb8ab47eb3fa856c0351452fb09af106645fd3d6a889878864fb35a4738aeab2",
+    "bytes": 611
+  },
+  {
+    "path": "fixtures/holdout/emails/H-008.eml",
+    "sha256": "6302be18d7e2c550ef6ec23cd0bb2d1a85c67bf4e0ec4f09b5105b9b85fc6145",
+    "bytes": 622
+  },
+  {
+    "path": "fixtures/holdout/emails/H-009.eml",
+    "sha256": "2f7a865c38172608d0fd5b1cc11253b330fbc82d6b412eb599c67950ac5dd490",
+    "bytes": 528
+  },
+  {
+    "path": "fixtures/holdout/emails/H-010.eml",
+    "sha256": "f4e382a7ee4678b7a4388919132f3f3632ad784531436919b0dd6f628671fb4a",
+    "bytes": 485
+  },
+  {
+    "path": "fixtures/holdout/emails/H-011.eml",
+    "sha256": "9509698923d25392c8dcac5fc3222a5017912924dec4e0fffbbadadd28dd3539",
+    "bytes": 476
+  },
+  {
+    "path": "fixtures/holdout/emails/H-012.eml",
+    "sha256": "d03bdce5c962cfc7ee0770ac32146952e6f8308b2622cc54ea1daf17c99a2152",
+    "bytes": 509
+  },
+  {
+    "path": "fixtures/holdout/emails/H-013.eml",
+    "sha256": "04cc7c0654b0801e852ce827fc4219f8ffb41a864853f823c3b606809a2ab816",
+    "bytes": 417
+  },
+  {
+    "path": "fixtures/holdout/emails/H-014.eml",
+    "sha256": "ce3ac0c1a623f552d6aad97836bb85cca49bd9ac1bb83851a03b69c5105d14b9",
+    "bytes": 469
+  },
+  {
+    "path": "fixtures/holdout/emails/H-015.eml",
+    "sha256": "0f6a92fbd02e108e89660163a4df2af75b741b00b9438958b53352760c570c7b",
+    "bytes": 430
+  },
+  {
+    "path": "fixtures/holdout/emails/H-016.eml",
+    "sha256": "a025693388f9d6ea3df63fd3dac373760a0d800442b2575333c56d910a6352ae",
+    "bytes": 380
+  },
+  {
+    "path": "fixtures/holdout/emails/H-017.eml",
+    "sha256": "42a6fdeccc2278f8684d1cfcc31ea462a9bdbe09eac4136a0c1912d403ec4012",
+    "bytes": 457
+  },
+  {
+    "path": "fixtures/holdout/emails/H-018.eml",
+    "sha256": "2f402ab5d19c9861e858f30d39f3c55e6e6d8cadba8bca1370c64a5aaa9e8605",
+    "bytes": 369
+  },
+  {
+    "path": "fixtures/holdout/emails/H-019.eml",
+    "sha256": "3475941f3ff5df69caf3b9ed237e71a63b0a4e761e5c64970cc0ec482e79445f",
+    "bytes": 406
+  },
+  {
+    "path": "fixtures/holdout/emails/H-020.eml",
+    "sha256": "0394dd28151990af7b07787242a1095922a84a678d7f03d33d5c0d9d1cf993c3",
+    "bytes": 401
+  },
+  {
+    "path": "fixtures/holdout/emails/H-021.eml",
+    "sha256": "cad1fe5ced1dc0649ef25494d47e103af761d21e7218ae7cda6745e7c85b1019",
+    "bytes": 423
+  },
+  {
+    "path": "fixtures/holdout/emails/H-022.eml",
+    "sha256": "22ab718f7ca9329e8e708f999c073fcf6aa36e1a328c5384cd2f8fc1d50df537",
+    "bytes": 364
+  },
+  {
+    "path": "fixtures/holdout/emails/H-023.eml",
+    "sha256": "322f517ccbafad2320244e25143522a60fbe3ea5ad5d88228d1fd34735357853",
+    "bytes": 445
+  },
+  {
+    "path": "fixtures/holdout/emails/H-024.eml",
+    "sha256": "dbc374b80b2d07b50a015074d5106064420cd63ba13bf4ffc771d3950ac03e95",
+    "bytes": 450
+  },
+  {
+    "path": "fixtures/holdout/emails/H-025.eml",
+    "sha256": "05e550e2bef42080cee0f75fbde7f737da95cc4a4d32e14f29fc8aa18b5ecc32",
+    "bytes": 588
+  },
+  {
+    "path": "fixtures/holdout/emails/H-026.eml",
+    "sha256": "49aa72d6ee8a1a6f794ec8c85e0c1b2d0c9b3221759ecf1d78f184b1e5613841",
+    "bytes": 453
+  },
+  {
+    "path": "fixtures/holdout/emails/H-027.eml",
+    "sha256": "4dc64f30f81065d551ff29bbb106149a18fed2c33411a7cbf6146b6ffeca5ca6",
+    "bytes": 438
+  },
+  {
+    "path": "fixtures/holdout/emails/H-028.eml",
+    "sha256": "5543ade134b4a9bca9d8da00208de1b9c551db9a364b6d33d8154054d20ed310",
+    "bytes": 435
+  },
+  {
+    "path": "fixtures/holdout/emails/H-029.eml",
+    "sha256": "baf5aa8f1656251bd4c414bc674973f385bb45b0c44532c3da0dbc58c69dd2fa",
+    "bytes": 407
+  },
+  {
+    "path": "fixtures/holdout/emails/H-030.eml",
+    "sha256": "77d1107e4c28a4d02f2c4ba191c3ae40a6d57643ac0860ff0872082c84de7566",
+    "bytes": 769
+  }
+]

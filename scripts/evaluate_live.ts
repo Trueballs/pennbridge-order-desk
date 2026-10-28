@@ -11,7 +11,7 @@ import { runCase as runPdfCase, type PdfCase } from './evaluate_pdfs';
 /**
  * Live-model benchmark. Same fixtures, parsing, domain validation and scoring as the offline
  * evaluators (their runCase is reused); only the provider differs. Results are LIVE MODEL results.
- * Usage: npx tsx scripts/evaluate_live.ts [--dry-run] [--limit N (per suite)] [--provider anthropic|gemini] [--model ID]
+ * Usage: npx tsx scripts/evaluate_live.ts [--dry-run] [--suite dev|holdout|all] [--limit N (per suite)] [--provider anthropic|gemini] [--model ID]
  */
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sha = (b: Buffer | string) => createHash('sha256').update(b).digest('hex');
@@ -41,28 +41,40 @@ function arg(name: string): string | undefined {
 const pct = (xs: number[], q: number) => { const s = [...xs].sort((a, b) => a - b); return s.length ? s[Math.max(0, Math.ceil(s.length * q) - 1)] : null; };
 const redact = (text: string) => [process.env.ANTHROPIC_API_KEY, process.env.GEMINI_API_KEY].filter((k): k is string => !!k).reduce((t, k) => t.split(k).join('[redacted]'), text);
 
-type Task = { suite: 'email' | 'pdf'; id: string; email: Fixture | PdfCase };
+type FixtureSet = 'dev' | 'holdout';
+type Task = { suite: 'email' | 'pdf'; set: FixtureSet; id: string; email: Fixture | PdfCase };
 type Record_ = {
-  suite: 'email' | 'pdf'; id: string; outcome: 'pass' | 'fail' | 'error' | 'diagnostic' | 'skipped';
+  suite: 'email' | 'pdf'; set: FixtureSet; id: string; outcome: 'pass' | 'fail' | 'error' | 'diagnostic' | 'skipped';
   fields: Record<string, unknown>; apiLatencyMs: number | null; caseLatencyMs: number | null;
   inputTokens: number | null; outputTokens: number | null; costUsd: number | null; error?: string;
 };
 
-async function loadTasks(limit: number | undefined) {
-  const emails = JSON.parse(await readFile(path.join(ROOT, 'fixtures/cases.json'), 'utf8')) as Fixture[];
-  const manifest = JSON.parse(await readFile(path.join(ROOT, 'fixtures/manifest.json'), 'utf8')) as Array<{ path: string; sha256: string }>;
+const SETS: Record<FixtureSet, { dir: string; emails: number; pdfs: number }> = {
+  dev: { dir: 'fixtures', emails: 50, pdfs: 20 },
+  holdout: { dir: 'fixtures/holdout', emails: 30, pdfs: 6 },
+};
+
+async function loadSet(set: FixtureSet, limit: number | undefined): Promise<Task[]> {
+  const { dir, emails: nEmail, pdfs: nPdf } = SETS[set];
+  const emails = JSON.parse(await readFile(path.join(ROOT, dir, 'cases.json'), 'utf8')) as Fixture[];
+  const manifest = JSON.parse(await readFile(path.join(ROOT, dir, 'manifest.json'), 'utf8')) as Array<{ path: string; sha256: string }>;
   const frozen = new Map(manifest.map(x => [x.path, x.sha256]));
   for (const c of emails) {
     if (frozen.get(c.email_path) !== sha(await readFile(path.join(ROOT, c.email_path)))) throw new Error(`Frozen input hash mismatch for ${c.id}`);
   }
-  const pdfs = JSON.parse(await readFile(path.join(ROOT, 'fixtures/pdf/cases.json'), 'utf8')) as PdfCase[];
-  if (emails.length !== 50 || pdfs.length !== 20) throw new Error(`Expected 50 email and 20 PDF fixtures; found ${emails.length} and ${pdfs.length}.`);
-  const reference = JSON.parse(await readFile(path.join(ROOT, 'fixtures/context.json'), 'utf8'));
+  const pdfs = JSON.parse(await readFile(path.join(ROOT, dir, 'pdf/cases.json'), 'utf8')) as PdfCase[];
+  if (emails.length !== nEmail || pdfs.length !== nPdf) throw new Error(`Expected ${nEmail} email and ${nPdf} PDF ${set} fixtures; found ${emails.length} and ${pdfs.length}.`);
   const take = <T,>(xs: T[]) => (limit === undefined ? xs : xs.slice(0, limit));
-  const tasks: Task[] = [
-    ...take(emails).map(c => ({ suite: 'email' as const, id: c.id, email: c })),
-    ...take(pdfs).map(c => ({ suite: 'pdf' as const, id: c.id, email: c })),
+  return [
+    ...take(emails).map(c => ({ suite: 'email' as const, set, id: c.id, email: c })),
+    ...take(pdfs).map(c => ({ suite: 'pdf' as const, set, id: c.id, email: c })),
   ];
+}
+
+async function loadTasks(limit: number | undefined, suite: 'dev' | 'holdout' | 'all') {
+  const reference = JSON.parse(await readFile(path.join(ROOT, 'fixtures/context.json'), 'utf8'));
+  const sets: FixtureSet[] = suite === 'all' ? ['dev', 'holdout'] : [suite];
+  const tasks = (await Promise.all(sets.map(s => loadSet(s, limit)))).flat();
   return { tasks, reference };
 }
 
@@ -96,19 +108,22 @@ async function main() {
   const limitArg = arg('--limit');
   const limit = limitArg === undefined ? undefined : Number(limitArg);
   if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) throw new Error('--limit must be a positive integer.');
+  const suite = (arg('--suite') || 'dev') as 'dev' | 'holdout' | 'all';
+  if (!['dev', 'holdout', 'all'].includes(suite)) throw new Error('--suite must be dev, holdout or all.');
   const budget = Number(process.env.AI_RUN_BUDGET_USD || '2.00');
   if (!(budget > 0)) throw new Error('AI_RUN_BUDGET_USD must be a positive number.');
   const hasKey = !!process.env[KEY_VAR[provider]];
   const dry = process.argv.includes('--dry-run') || !hasKey;
   process.chdir(ROOT);
 
-  const { tasks, reference } = await loadTasks(limit);
+  const { tasks, reference } = await loadTasks(limit, suite);
   const inRate = process.env.AI_INPUT_USD_PER_MILLION ?? String(price.in);
   const outRate = process.env.AI_OUTPUT_USD_PER_MILLION ?? String(price.out);
 
   if (dry) {
     const est = await estimate(tasks, { in: Number(inRate), out: Number(outRate) });
     console.log(`DRY RUN (no network, no model calls)${hasKey ? '' : ` - ${KEY_VAR[provider]} not set`}`);
+    console.log(`Suite: ${suite}`);
     console.log(`Provider/model: ${provider} / ${model}  ($${inRate} in, $${outRate} out per 1M tokens; ${price.source})`);
     console.log(`Cases: ${est.cases} (${tasks.filter(t => t.suite === 'email').length} email + ${tasks.filter(t => t.suite === 'pdf').length} PDF)`);
     console.log(`Estimated input tokens:  ${est.inputTokens[0].toLocaleString()} - ${est.inputTokens[1].toLocaleString()}`);
@@ -148,7 +163,7 @@ async function main() {
         try { const r = await live.extract(input); usage = r.usage as any; modelLines = r.extracted.lines.map(l => ({ sku: l.sku, manufacturerReference: l.manufacturerReference, customerAlias: l.customerAlias, quantity: l.quantity, unit: l.unit, rawText: l.rawText.slice(0, 160) })); return r; } catch (e: any) { failure = e; throw e; }
       },
     };
-    const base = { suite: t.suite, id: t.id };
+    const base = { suite: t.suite, set: t.set, id: t.id };
     let rec: Record_;
     if (t.suite === 'email') {
       const r = await runEmailCase(t.email as Fixture, reference, wrapped);
@@ -176,7 +191,7 @@ async function main() {
   const worker = async () => { while (!stop && next < tasks.length) await runTask(tasks[next++]); };
   const startedAt = new Date();
   await Promise.all([worker(), worker()]);
-  for (; next < tasks.length; next++) records.push({ suite: tasks[next].suite, id: tasks[next].id, outcome: 'skipped', fields: {}, apiLatencyMs: null, caseLatencyMs: null, inputTokens: null, outputTokens: null, costUsd: null, error: stop ?? 'not run' });
+  for (; next < tasks.length; next++) records.push({ suite: tasks[next].suite, set: tasks[next].set, id: tasks[next].id, outcome: 'skipped', fields: {}, apiLatencyMs: null, caseLatencyMs: null, inputTokens: null, outputTokens: null, costUsd: null, error: stop ?? 'not run' });
 
   // ---- summary ----
   const email = records.filter(r => r.suite === 'email'), pdf = records.filter(r => r.suite === 'pdf');
@@ -189,7 +204,10 @@ async function main() {
   const lat = billed.map(r => r.apiLatencyMs as number);
   const sum = (xs: (number | null)[]) => xs.reduce<number>((a, b) => a + (b ?? 0), 0);
   const summary = {
-    label: 'LIVE MODEL RESULTS (real API calls). Not the offline MockProvider; fixtures are synthetic and visible, not a holdout.',
+    label: suite === 'dev' ? 'LIVE MODEL RESULTS (real API calls). Not the offline MockProvider; fixtures are synthetic and visible DEV fixtures (the prompt was tuned on them), not a holdout.'
+      : suite === 'holdout' ? 'LIVE MODEL RESULTS (real API calls) on the HELD-OUT synthetic set (30 email + 6 PDF, never used to tune the prompt). Not the offline MockProvider.'
+      : 'LIVE MODEL RESULTS (real API calls) on dev + held-out fixtures combined; read the dev and holdout sets separately (the prompt was tuned on dev).',
+    suite,
     provider, model, pricing: { inputUsdPerMillion: Number(inRate), outputUsdPerMillion: Number(outRate), source: price.source },
     budgetUsd: budget, stoppedEarly: stop, cases: tasks.length, attempted: records.filter(r => r.outcome !== 'skipped').length, skipped: records.filter(r => r.outcome === 'skipped').length,
     modelOrScoringErrors: records.filter(r => r.outcome === 'error').length,
@@ -199,12 +217,12 @@ async function main() {
     tokens: { input: sum(billed.map(r => r.inputTokens)), output: sum(billed.map(r => r.outputTokens)) },
     costUsd: { totalMeasured: Math.round(sum(billed.map(r => r.costUsd)) * 1e6) / 1e6, guardSpend: Math.round(spent * 1e6) / 1e6, perCase: billed.length ? sum(billed.map(r => r.costUsd)) / billed.length : null },
   };
-  const stamp = startedAt.toISOString().replace(/[:.]/g, '-');
+  const stamp = (suite === 'dev' ? '' : `${suite}-`) + startedAt.toISOString().replace(/[:.]/g, '-');
   const outDir = path.join(ROOT, 'results/live'); await mkdir(outDir, { recursive: true });
   await writeFile(path.join(outDir, `run-${stamp}.json`), JSON.stringify({ schemaVersion: 1, createdAt: startedAt.toISOString(), summary, records }, null, 2) + '\n');
   const row = (k: string, v: { passed: number; denominator: number }) => `| ${k} | ${v.passed}/${v.denominator} | ${v.denominator ? ((v.passed / v.denominator) * 100).toFixed(1) + '%' : 'n/a'} |`;
   const failures = records.filter(r => r.outcome === 'fail' || r.outcome === 'error');
-  const md = [`# Live AI benchmark - ${provider} / ${model}`, '', `**${summary.label}**`, '', `Run: ${startedAt.toISOString()}`,
+  const md = [`# Live AI benchmark (${suite}) - ${provider} / ${model}`, '', `**${summary.label}**`, '', `Run: ${startedAt.toISOString()}`,
     `Cases: ${summary.cases}; attempted ${summary.attempted}; skipped ${summary.skipped}${stop ? ` (stopped: ${stop})` : ''}; model/scoring errors ${summary.modelOrScoringErrors} (counted as failures).`, '',
     '## Email accuracy by check (scored cases; unsupported-setup cases excluded as diagnostic)', '| Check | Passed | Rate |', '|---|---|---|', ...Object.entries(perCheck).map(([k, v]) => row(k, v)), '',
     '## PDF accuracy by field (line-level)', '| Field | Passed | Rate |', '|---|---|---|', ...Object.entries(pdfFields).map(([k, v]) => row(k, v)),
@@ -214,7 +232,7 @@ async function main() {
     `- Total cost: $${summary.costUsd.totalMeasured.toFixed(4)} (budget guard counted $${summary.costUsd.guardSpend.toFixed(4)} of $${budget.toFixed(2)}); per order: $${summary.costUsd.perCase === null ? 'n/a' : summary.costUsd.perCase.toFixed(5)}`,
     `- Pricing: $${inRate} in / $${outRate} out per 1M tokens (${price.source})`, '',
     `## Failures (${failures.length})`, ...(failures.length ? failures.map(r => `- ${r.suite} ${r.id}: ${r.outcome === 'error' ? `error - ${r.error}` : r.suite === 'email' ? 'failed ' + Object.entries(r.fields).filter(([k, v]) => v === false && k !== 'overall').map(([k]) => k).join(', ') : 'lines or page evidence mismatch'}`) : ['- none']),
-    '', 'Scoring is the same as scripts/evaluate.ts and scripts/evaluate_pdfs.ts (production parseInput and domain validate; expected labels are used only after extraction). Synthetic visible fixtures; not a production accuracy estimate.'];
+    '', 'Scoring is the same as scripts/evaluate.ts and scripts/evaluate_pdfs.ts (production parseInput and domain validate; expected labels are used only after extraction). Synthetic fixtures; not a production accuracy estimate.'];
   await writeFile(path.join(outDir, `run-${stamp}.md`), md.join('\n') + '\n');
   console.log(JSON.stringify(summary, null, 2));
   console.log(`Wrote results/live/run-${stamp}.json and .md`);

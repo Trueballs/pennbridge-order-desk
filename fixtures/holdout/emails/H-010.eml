@@ -1,0 +1,16 @@
+From: leah@caldergate.example
+To: orders@pennbridge.example
+Subject: Order H-010
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <h-010@holdout.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Hello,
+
+The site visit has been pushed back to January so please scrap purchase order=
+ CP-0371 - we won't be needing any of it yet.
+Thanks very much,
+Leah (Caldergate)

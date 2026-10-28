@@ -1,0 +1,18 @@
+From: mia@alderwick.example
+To: orders@pennbridge.example
+Subject: Order H-005
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <h-005@holdout.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><head><style>td{padding:4px}</style></head><body style=3D"font-family:A=
+rial"><p>Hello,</p><p>Please process <b>PO ALD-8812</b> for delivery to <b>MA=
+IN</b>:</p><table border=3D"1"><tr><th>Item</th><th>Qty</th><th>Unit</th><th>=
+Price</th></tr><tr><td>BR-6204-2RS</td><td>12</td><td>each</td><td>=C2=A36.00=
+</td></tr><tr><td>OR-20X3-NBR</td><td>50</td><td>each</td><td>=C2=A30.40</td>=
+</tr><tr><td>PF-12-NPT-M</td><td>6</td><td>each</td><td>=C2=A34.50</td></tr><=
+/table><p>Total =C2=A3119.00 net.</p><p>Regards,<br>Mia Chen<br><i>Alderwick =
+Engineering Ltd</i></p></body></html>

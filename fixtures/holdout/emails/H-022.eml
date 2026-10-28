@@ -1,0 +1,11 @@
+From: leah@caldergate.example
+To: orders@pennbridge.example
+Subject: Order H-022
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <h-022@holdout.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+MIME-Version: 1.0
+
+Hello, PO CP-0420 to MAIN: 500 each FN-M8-A2-100 (M8 nuts). Leah

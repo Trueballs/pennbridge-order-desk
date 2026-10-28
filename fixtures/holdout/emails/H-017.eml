@@ -1,0 +1,12 @@
+From: sam@brookmere.example
+To: orders@pennbridge.example
+Subject: Order H-017
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <h-017@holdout.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Hi, PO BM-24-0950, delivery MAIN. We need 25 off 20 mm ID x 3 mm FKM o-rings,=
+ and 2 packs of 100 M10 x 30 mm A2 stainless hex bolts. Thanks, Sam

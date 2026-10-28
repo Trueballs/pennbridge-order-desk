@@ -1,0 +1,21 @@
+From: sam@brookmere.example
+To: orders@pennbridge.example
+Subject: Order H-006
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <h-006@holdout.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Hi - can you order this for us? Our PO is BM-24-0933, deliver to MAIN. Thanks.
+Sam
+
+---------- Forwarded message ---------
+From: Dave Okafor <dave.okafor@brookmere.example>
+Date: Fri, 30 Oct 2026 at 16:40
+Subject: running low
+To: Sam Whitaker <sam@brookmere.example>
+
+Sam, we are nearly out on the mezzanine store. 4 rolls of TAPE-PTFE-12 and 20=
+ each DISC-115-60 please. Cheers, Dave

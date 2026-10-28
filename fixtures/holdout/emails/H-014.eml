@@ -1,0 +1,13 @@
+From: leah@caldergate.example
+To: orders@pennbridge.example
+Subject: Order H-014
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <h-014@holdout.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Hello, Caldergate PO CP-0425 - 12 pcs of the old part BR-6204-OLD please, del=
+ivery MAIN. We know it is the old type, that is what the machine takes.
+Leah

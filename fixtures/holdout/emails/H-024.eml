@@ -1,0 +1,13 @@
+From: purchasing@harlow-tools.example
+To: orders@pennbridge.example
+Subject: Order H-024
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <h-024@holdout.pennbridge.example>
+X-Pennbridge-Synthetic: true
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Hello, I buy for Brookmere's new depot. PO NEW-5521: 4 each BR-6204-ZZ. Pleas=
+e put it on their account.
+R. Patel, Harlow Tools

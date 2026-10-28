@@ -1,0 +1,872 @@
+[
+  {
+    "id": "HP-001",
+    "synthetic": true,
+    "layout": 5,
+    "customer_id": "C002",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/holdout/pdf/HP-001.pdf",
+    "email": "fixtures/holdout/pdf/HP-001.eml",
+    "sha256": "4f6dd73e67dd1fe031111162f107aee696ab51df92938c775f62d3dd87a6611f",
+    "expected_lines": [
+      {
+        "sku": "GL-NIT-M-100",
+        "quantity": "7",
+        "unit": "box",
+        "quoted_unit_price_gbp": "9.00"
+      },
+      {
+        "sku": "GL-NIT-XL-100",
+        "quantity": "6",
+        "unit": "box",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "3",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      },
+      {
+        "sku": "GL-WORK-L",
+        "quantity": "15",
+        "unit": "pair",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "FB-0830-A2-050",
+        "quantity": "18",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "7.00"
+      },
+      {
+        "sku": "FB-0830-ZP-100",
+        "quantity": "12",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "8.00"
+      },
+      {
+        "sku": "FW-M8-A2-100",
+        "quantity": "7",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "3.00"
+      },
+      {
+        "sku": "BR-6204-ZZ",
+        "quantity": "16",
+        "unit": "each",
+        "quoted_unit_price_gbp": "5.50"
+      },
+      {
+        "sku": "FN-M8-A2-100",
+        "quantity": "11",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "6.00"
+      }
+    ]
+  },
+  {
+    "id": "HP-002",
+    "synthetic": true,
+    "layout": 6,
+    "customer_id": "C003",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/holdout/pdf/HP-002.pdf",
+    "email": "fixtures/holdout/pdf/HP-002.eml",
+    "sha256": "53ff776b80407df08ec1f96433af1eeec13c6d3508e1d51819d5b7f7e142f349",
+    "expected_lines": [
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "15",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      },
+      {
+        "sku": "FB-1030-A2-100",
+        "quantity": "8",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "18.00"
+      },
+      {
+        "sku": "GL-NIT-M-100",
+        "quantity": "17",
+        "unit": "box",
+        "quoted_unit_price_gbp": "9.00"
+      },
+      {
+        "sku": "FB-0830-ZP-100",
+        "quantity": "5",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "8.00"
+      },
+      {
+        "sku": "FB-0835-A2-100",
+        "quantity": "3",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "13.00"
+      },
+      {
+        "sku": "BR-6204-ZZ",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "5.50"
+      },
+      {
+        "sku": "HOSE-PVC-10",
+        "quantity": "4",
+        "unit": "metre",
+        "quoted_unit_price_gbp": "2.00"
+      },
+      {
+        "sku": "GL-WORK-L",
+        "quantity": "20",
+        "unit": "pair",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "GL-NIT-XL-100",
+        "quantity": "19",
+        "unit": "box",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "15",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "FB-0830-A2-050",
+        "quantity": "17",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "7.00"
+      },
+      {
+        "sku": "OR-20X3-FKM",
+        "quantity": "8",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.10"
+      },
+      {
+        "sku": "PF-12-BSP-M",
+        "quantity": "23",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "DISC-115-60",
+        "quantity": "17",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.20"
+      }
+    ]
+  },
+  {
+    "id": "HP-003",
+    "synthetic": true,
+    "layout": 7,
+    "customer_id": "C001",
+    "shipping_address": "NORTH",
+    "pdf": "fixtures/holdout/pdf/HP-003.pdf",
+    "email": "fixtures/holdout/pdf/HP-003.eml",
+    "sha256": "acfbb26d9720b462db0da1ebea9b45e643ff24dec5f928ed682ed554d6f459ab",
+    "expected_lines": [
+      {
+        "sku": "GL-NIT-M-100",
+        "quantity": "8",
+        "unit": "box",
+        "quoted_unit_price_gbp": "9.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "19",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      },
+      {
+        "sku": "FN-M8-A2-100",
+        "quantity": "1",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "FB-1030-A2-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "18.00"
+      },
+      {
+        "sku": "FB-0835-A2-100",
+        "quantity": "8",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "13.00"
+      },
+      {
+        "sku": "OR-20X3-NBR",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "0.40"
+      },
+      {
+        "sku": "GL-WORK-L",
+        "quantity": "23",
+        "unit": "pair",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "FW-M8-A2-100",
+        "quantity": "5",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "3.00"
+      },
+      {
+        "sku": "BR-6204-ZZ",
+        "quantity": "20",
+        "unit": "each",
+        "quoted_unit_price_gbp": "5.50"
+      },
+      {
+        "sku": "DISC-115-60",
+        "quantity": "17",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.20"
+      },
+      {
+        "sku": "PF-12-BSP-M",
+        "quantity": "10",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "FB-0830-ZP-100",
+        "quantity": "6",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "8.00"
+      },
+      {
+        "sku": "PF-12-NPT-M",
+        "quantity": "24",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.50"
+      },
+      {
+        "sku": "OR-20X3-FKM",
+        "quantity": "14",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.10"
+      },
+      {
+        "sku": "GL-NIT-XL-100",
+        "quantity": "24",
+        "unit": "box",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "FB-0830-A2-050",
+        "quantity": "19",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "7.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "24",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "HOSE-PVC-10",
+        "quantity": "10",
+        "unit": "metre",
+        "quoted_unit_price_gbp": "2.00"
+      },
+      {
+        "sku": "PF-12-BSP-M",
+        "quantity": "23",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "GL-NIT-M-100",
+        "quantity": "17",
+        "unit": "box",
+        "quoted_unit_price_gbp": "9.00"
+      },
+      {
+        "sku": "GL-WORK-L",
+        "quantity": "10",
+        "unit": "pair",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "FB-0830-ZP-100",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "8.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "16",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      },
+      {
+        "sku": "FB-0830-A2-050",
+        "quantity": "5",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "7.00"
+      },
+      {
+        "sku": "GL-NIT-XL-100",
+        "quantity": "5",
+        "unit": "box",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "FB-0835-A2-100",
+        "quantity": "14",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "13.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "17",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-ZZ",
+        "quantity": "9",
+        "unit": "each",
+        "quoted_unit_price_gbp": "5.50"
+      },
+      {
+        "sku": "PF-12-NPT-M",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.50"
+      },
+      {
+        "sku": "OR-20X3-FKM",
+        "quantity": "16",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.10"
+      }
+    ]
+  },
+  {
+    "id": "HP-004",
+    "synthetic": true,
+    "layout": 8,
+    "customer_id": "C002",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/holdout/pdf/HP-004.pdf",
+    "email": "fixtures/holdout/pdf/HP-004.eml",
+    "sha256": "8b2eb48675b2239b557c9cbfafa0c2550f67adf67c6d1f2c48058bcf42ff54dd",
+    "expected_lines": [
+      {
+        "sku": "FB-1030-A2-100",
+        "quantity": "7",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "18.00"
+      },
+      {
+        "sku": "FN-M8-A2-100",
+        "quantity": "19",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "HOSE-PVC-10",
+        "quantity": "7.5",
+        "unit": "metre",
+        "quoted_unit_price_gbp": "2.00"
+      },
+      {
+        "sku": "OR-20X3-NBR",
+        "quantity": "13",
+        "unit": "each",
+        "quoted_unit_price_gbp": "0.40"
+      },
+      {
+        "sku": "GL-WORK-L",
+        "quantity": "11",
+        "unit": "pair",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "OR-20X3-FKM",
+        "quantity": "20",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.10"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "6",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      },
+      {
+        "sku": "FB-0830-ZP-100",
+        "quantity": "21",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "8.00"
+      },
+      {
+        "sku": "PF-12-BSP-M",
+        "quantity": "10",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "GL-NIT-M-100",
+        "quantity": "14",
+        "unit": "box",
+        "quoted_unit_price_gbp": "9.00"
+      },
+      {
+        "sku": "FB-0830-A2-050",
+        "quantity": "2",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "7.00"
+      },
+      {
+        "sku": "PF-12-NPT-M",
+        "quantity": "15",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.50"
+      },
+      {
+        "sku": "GL-NIT-XL-100",
+        "quantity": "15",
+        "unit": "box",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "FW-M8-A2-100",
+        "quantity": "18",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "3.00"
+      },
+      {
+        "sku": "DISC-115-60",
+        "quantity": "8",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.20"
+      },
+      {
+        "sku": "BR-6204-ZZ",
+        "quantity": "9",
+        "unit": "each",
+        "quoted_unit_price_gbp": "5.50"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "FB-0835-A2-100",
+        "quantity": "19",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "13.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "24",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "DISC-115-60",
+        "quantity": "22",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.20"
+      },
+      {
+        "sku": "OR-20X3-FKM",
+        "quantity": "15",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.10"
+      },
+      {
+        "sku": "PF-12-NPT-M",
+        "quantity": "18",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.50"
+      },
+      {
+        "sku": "FB-0830-ZP-100",
+        "quantity": "16",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "8.00"
+      },
+      {
+        "sku": "FB-1030-A2-100",
+        "quantity": "21",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "18.00"
+      },
+      {
+        "sku": "FB-0830-A2-050",
+        "quantity": "5",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "7.00"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "8",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      },
+      {
+        "sku": "PF-12-BSP-M",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "GL-WORK-L",
+        "quantity": "6",
+        "unit": "pair",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "HOSE-PVC-10",
+        "quantity": "4",
+        "unit": "metre",
+        "quoted_unit_price_gbp": "2.00"
+      },
+      {
+        "sku": "BR-6204-ZZ",
+        "quantity": "2",
+        "unit": "each",
+        "quoted_unit_price_gbp": "5.50"
+      },
+      {
+        "sku": "FW-M8-A2-100",
+        "quantity": "18",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "3.00"
+      },
+      {
+        "sku": "GL-NIT-XL-100",
+        "quantity": "13",
+        "unit": "box",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "GL-NIT-M-100",
+        "quantity": "2",
+        "unit": "box",
+        "quoted_unit_price_gbp": "9.00"
+      },
+      {
+        "sku": "FB-0835-A2-100",
+        "quantity": "5",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "13.00"
+      },
+      {
+        "sku": "OR-20X3-NBR",
+        "quantity": "15",
+        "unit": "each",
+        "quoted_unit_price_gbp": "0.40"
+      },
+      {
+        "sku": "FN-M8-A2-100",
+        "quantity": "6",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "BR-6204-ZZ",
+        "quantity": "18",
+        "unit": "each",
+        "quoted_unit_price_gbp": "5.50"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "7",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      }
+    ]
+  },
+  {
+    "id": "HP-005",
+    "synthetic": true,
+    "layout": 9,
+    "customer_id": "C003",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/holdout/pdf/HP-005.pdf",
+    "email": "fixtures/holdout/pdf/HP-005.eml",
+    "sha256": "a5e41cc41b9281950e0cec92ae21b1a5305505e14921e8e352e46983baf497fa",
+    "expected_lines": [
+      {
+        "sku": "GL-WORK-L",
+        "quantity": "14",
+        "unit": "pair",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "GL-NIT-XL-100",
+        "quantity": "20",
+        "unit": "box",
+        "quoted_unit_price_gbp": "10.00"
+      },
+      {
+        "sku": "BR-6204-ZZ",
+        "quantity": "13",
+        "unit": "each",
+        "quoted_unit_price_gbp": "5.50"
+      },
+      {
+        "sku": "DISC-115-60",
+        "quantity": "15",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.20"
+      },
+      {
+        "sku": "TAPE-PTFE-12",
+        "quantity": "16",
+        "unit": "roll",
+        "quoted_unit_price_gbp": "1.50"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "22",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "FB-0830-ZP-100",
+        "quantity": "8",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "8.00"
+      },
+      {
+        "sku": "PF-12-BSP-M",
+        "quantity": "23",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "FB-0830-A2-050",
+        "quantity": "6",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "7.00"
+      },
+      {
+        "sku": "HOSE-PVC-10",
+        "quantity": "7.5",
+        "unit": "metre",
+        "quoted_unit_price_gbp": "2.00"
+      },
+      {
+        "sku": "FW-M8-A2-100",
+        "quantity": "17",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "3.00"
+      },
+      {
+        "sku": "OR-20X3-FKM",
+        "quantity": "9",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.10"
+      },
+      {
+        "sku": "GL-NIT-M-100",
+        "quantity": "2",
+        "unit": "box",
+        "quoted_unit_price_gbp": "9.00"
+      },
+      {
+        "sku": "OR-20X3-NBR",
+        "quantity": "11",
+        "unit": "each",
+        "quoted_unit_price_gbp": "0.40"
+      },
+      {
+        "sku": "FN-M8-A2-100",
+        "quantity": "20",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "FB-0835-A2-100",
+        "quantity": "4",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "13.00"
+      },
+      {
+        "sku": "FB-1030-A2-100",
+        "quantity": "12",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "18.00"
+      },
+      {
+        "sku": "PF-12-NPT-M",
+        "quantity": "24",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.50"
+      },
+      {
+        "sku": "GL-WORK-L",
+        "quantity": "19",
+        "unit": "pair",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "PF-12-BSP-M",
+        "quantity": "5",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "PF-12-NPT-M",
+        "quantity": "4",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.50"
+      },
+      {
+        "sku": "OR-20X3-FKM",
+        "quantity": "18",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.10"
+      },
+      {
+        "sku": "BR-6204-ZZ",
+        "quantity": "16",
+        "unit": "each",
+        "quoted_unit_price_gbp": "5.50"
+      },
+      {
+        "sku": "DISC-115-60",
+        "quantity": "13",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.20"
+      },
+      {
+        "sku": "FW-M8-A2-100",
+        "quantity": "12",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "3.00"
+      },
+      {
+        "sku": "GL-NIT-XL-100",
+        "quantity": "19",
+        "unit": "box",
+        "quoted_unit_price_gbp": "10.00"
+      }
+    ]
+  },
+  {
+    "id": "HP-006",
+    "synthetic": true,
+    "layout": 10,
+    "customer_id": "C001",
+    "shipping_address": "MAIN",
+    "pdf": "fixtures/holdout/pdf/HP-006.pdf",
+    "email": "fixtures/holdout/pdf/HP-006.eml",
+    "sha256": "b7c527c4ac623f42ce50aabee1b3b605f9dcb7a953e478cda180c870b5920323",
+    "expected_lines": [
+      {
+        "sku": "HOSE-PVC-10",
+        "quantity": "7.5",
+        "unit": "metre",
+        "quoted_unit_price_gbp": "2.00"
+      },
+      {
+        "sku": "OR-20X3-FKM",
+        "quantity": "23",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.10"
+      },
+      {
+        "sku": "GL-WORK-L",
+        "quantity": "16",
+        "unit": "pair",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "PF-12-NPT-M",
+        "quantity": "21",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.50"
+      },
+      {
+        "sku": "FB-0830-A2-050",
+        "quantity": "5",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "7.00"
+      },
+      {
+        "sku": "OR-20X3-NBR",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "0.40"
+      },
+      {
+        "sku": "PF-12-BSP-M",
+        "quantity": "9",
+        "unit": "each",
+        "quoted_unit_price_gbp": "4.00"
+      },
+      {
+        "sku": "BR-6204-2RS",
+        "quantity": "12",
+        "unit": "each",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "FW-M8-A2-100",
+        "quantity": "16",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "3.00"
+      },
+      {
+        "sku": "BR-6204-ZZ",
+        "quantity": "12",
+        "unit": "each",
+        "quoted_unit_price_gbp": "5.50"
+      },
+      {
+        "sku": "FB-1030-A2-100",
+        "quantity": "3",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "18.00"
+      },
+      {
+        "sku": "FB-0830-ZP-100",
+        "quantity": "10",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "8.00"
+      },
+      {
+        "sku": "FN-M8-A2-100",
+        "quantity": "12",
+        "unit": "pack",
+        "quoted_unit_price_gbp": "6.00"
+      },
+      {
+        "sku": "GL-NIT-M-100",
+        "quantity": "11",
+        "unit": "box",
+        "quoted_unit_price_gbp": "9.00"
+      },
+      {
+        "sku": "DISC-115-60",
+        "quantity": "6",
+        "unit": "each",
+        "quoted_unit_price_gbp": "1.20"
+      },
+      {
+        "sku": "GL-NIT-XL-100",
+        "quantity": "5",
+        "unit": "box",
+        "quoted_unit_price_gbp": "10.00"
+      }
+    ]
+  }
+]
