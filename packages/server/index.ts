@@ -291,7 +291,7 @@ export async function stats(actor:Session) {
   allow(actor);await initialiseDatabase();
   const [statuses,catalogue,jobs,usage]=await Promise.all([pool.query("SELECT status,count(*)::int AS count FROM orders GROUP BY status"),pool.query("SELECT count(*)::int AS count FROM products"),pool.query("SELECT count(*)::int AS count FROM jobs WHERE status IN ('queued','running','retry_wait')"),pool.query("SELECT data FROM model_usage")]);
   const counts=Object.fromEntries(statuses.rows.map(r=>[r.status,r.count]));
-  return {counts,totalOrders:statuses.rows.reduce((n,r)=>n+r.count,0),catalogueCount:catalogue.rows[0].count,pendingJobs:jobs.rows[0].count,mode:process.env.LIVE_AI_ENABLED==="true"?"live":"mock",modelCalls:usage.rowCount??0,modelUsage:usage.rows.map(r=>r.data)};
+  return {counts,totalOrders:statuses.rows.reduce((n,r)=>n+r.count,0),catalogueCount:catalogue.rows[0].count,pendingJobs:jobs.rows[0].count,mode:process.env.LIVE_AI_ENABLED==="true"?"live":"mock",provider:process.env.LIVE_AI_ENABLED==="true"?(process.env.AI_PROVIDER==="gemini"?"gemini":"anthropic"):"mock",model:process.env.LIVE_AI_ENABLED==="true"?process.env.EXTRACTION_MODEL||null:null,modelCalls:usage.rowCount??0,modelUsage:usage.rows.map(r=>r.data)};
 }
 export async function intake(actor:Session,input:IntakeRequest):Promise<IntakeResponse> {
   allow(actor,["reviewer","admin","ingestion"]);input=IntakeRequestSchema.parse(input);

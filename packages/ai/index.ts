@@ -125,11 +125,13 @@ export class LiveProvider implements ExtractionProvider {
   }
 }
 /** Google Gemini via plain REST generateContent (no SDK). Key stays in the x-goog-api-key header only. */
+const geminiKey=async()=>process.env.GEMINI_API_KEY||(process.env.GEMINI_API_KEY_FILE?(await readFile(process.env.GEMINI_API_KEY_FILE,'utf8').catch(()=>'')).trim():'');
 export class GeminiProvider implements ExtractionProvider {
   readonly mode='live' as const;
   constructor(private opts:{runId:string;orderId:string;budget?:{reserve:(usd:string)=>Promise<string>;settle:(id:string,usd:string|null)=>Promise<void>}}){}
   async extract(input:ExtractionInput){
-    if(process.env.LIVE_AI_ENABLED!=='true'||!process.env.GEMINI_API_KEY)throw Object.assign(new Error('Live AI is not configured. Offline parsing remains available.'),{code:'MODEL_UNAVAILABLE'});
+    const key=await geminiKey();
+    if(process.env.LIVE_AI_ENABLED!=='true'||!key)throw Object.assign(new Error('Live AI is not configured. Offline parsing remains available.'),{code:'MODEL_UNAVAILABLE'});
     const model=process.env.EXTRACTION_MODEL||'gemini-3.5-flash-lite';
     if(!['gemini-3.5-flash-lite','gemini-3.1-flash-lite','gemini-3.8-flash'].includes(model))throw new Error('Model is not on the explicitly configured allowlist.');
     const inRate=process.env.AI_INPUT_USD_PER_MILLION;const outRate=process.env.AI_OUTPUT_USD_PER_MILLION;
@@ -145,7 +147,7 @@ export class GeminiProvider implements ExtractionProvider {
     const reservation=await reserve(reserved);let settled=false;const start=Date.now();
     try {
       const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{method:'POST',signal:AbortSignal.timeout(60000),
-        headers:{'content-type':'application/json','x-goog-api-key':process.env.GEMINI_API_KEY},
+        headers:{'content-type':'application/json','x-goog-api-key':key},
         body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts:[{text:content}]}],generationConfig:{responseMimeType:'application/json',responseJsonSchema:schema,maxOutputTokens:maxOutput}})});
       if(!res.ok)throw Object.assign(new Error(`Gemini HTTP ${res.status}: ${(await res.text()).slice(0,400)}`),{code:'MODEL_UNAVAILABLE',status:res.status});
       const body=await res.json() as any;const u=body.usageMetadata||{};

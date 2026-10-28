@@ -43,9 +43,21 @@ This is a synthetic portfolio test, not a real purchase.
 
 Optionally attach a PDF from `fixtures/pdf/`. Send one consistent order per message. Polling runs every 60 seconds; the desk refreshes its queue every 15 seconds. Open http://127.0.0.1:3087 and review the new email. The connector does not authenticate the sender as a customer: select the appropriate synthetic customer (e.g. Alderwick/C001), select its delivery address, save and review validation. Do not treat the email's From header as authority.
 
-Processing still uses the deterministic mock parser. This step tests real email transport; it does not establish live AI accuracy.
+Processing uses the deterministic mock parser unless you enable live mode (see "Live AI in the desk"). This step tests real email transport; it does not establish live AI accuracy.
 
 Gmail spam: a new account may file the first test emails as Spam. The receiver reads only `INBOX`; mark the email **Not spam** and it is picked up on the next poll (moving it gives it a new INBOX UID above the checkpoint).
+
+## Live AI in the desk
+
+Opt-in, off by default. Real emails arriving through the receiver can be extracted by Gemini instead of the mock parser.
+
+```sh
+python3 scripts/configure_ai.py      # hidden key prompt -> runtime/ai/gemini_key (git-ignored)
+bash scripts/start_live_ai.sh        # optional: EXTRACTION_MODEL=gemini-3.8-flash
+bash scripts/stop_live_ai.sh         # back to mock mode
+```
+
+The key reaches only the worker, as a read-only Docker secret (`GEMINI_API_KEY_FILE`). Only the worker gets an extra egress network (`infra/live-ai.compose.yaml`); the app stays offline. Calls are capped at `AI_RUN_BUDGET_USD` (5.00) and `AI_ORDER_BUDGET_USD` (0.25) and cost real money. The desk header shows "Extraction: Mock" or "Extraction: Gemini live (model)", and each processed order shows its tokens, cost and latency. The header reflects configuration, not a successful call: check the order's usage line or the worker log. Email content is sent to Google while live mode is on, so use synthetic orders only.
 
 ## Behavior and isolation
 

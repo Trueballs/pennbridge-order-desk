@@ -20,7 +20,7 @@ curl -s http://127.0.0.1:3087/api/health
 
 Expected: App, worker, Postgres, Mailpit and proxy are running. The health check returns `{"ok":true,"mode":"mock"}`. If the desk shows **502 Bad Gateway** after the app was rebuilt, run `docker compose -f infra/compose.yaml restart proxy`.
 
-The demo runs in mock mode with live AI off. Live mode can be turned on with `AI_PROVIDER=gemini` and `LIVE_AI_ENABLED=true`, with `GEMINI_API_KEY` in the environment. `infra/compose.yaml` currently sets `LIVE_AI_ENABLED: 'false'` in the shared app environment, so that line must be changed before the Compose stack can run live. Do not show live mode on the call unless it has been dry-run. The scenes below assume mock mode.
+The demo runs in mock mode with live AI off. Live mode is opt-in: `python3 scripts/configure_ai.py` once, then `bash scripts/start_live_ai.sh` (header badge reads "Extraction: Gemini live"), and `bash scripts/stop_live_ai.sh` to return to mock. See "Live AI in the desk" in [TEST-INBOX.md](TEST-INBOX.md). The base `infra/compose.yaml` stays mock-only. Do not show live mode on the call unless it has been dry-run. The scenes below assume mock mode.
 
 Only needed for the Odoo step in Scene A:
 

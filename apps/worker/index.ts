@@ -8,7 +8,7 @@ const owner=`worker-${randomUUID()}`;
 let stopping=false;
 process.on("SIGTERM",()=>{stopping=true;});process.on("SIGINT",()=>{stopping=true;});
 await initialiseDatabase();
-console.log(JSON.stringify({event:"worker.started",owner,mode:process.env.LIVE_AI_ENABLED==="true"?"live":"mock"}));
+console.log(JSON.stringify({event:"worker.started",owner,mode:process.env.LIVE_AI_ENABLED==="true"?"live":"mock",provider:process.env.LIVE_AI_ENABLED==="true"?process.env.AI_PROVIDER:undefined,model:process.env.LIVE_AI_ENABLED==="true"?process.env.EXTRACTION_MODEL:undefined}));
 while(!stopping) {
   const job=await claimJob(owner);
   if(!job) { await new Promise(resolve=>setTimeout(resolve,500));continue; }

@@ -1,0 +1,27 @@
+# Opt-in live Gemini extraction: compose this WITH compose.yaml (see scripts/start_live_ai.sh).
+# Only the worker gets internet egress and the key. The app never calls the model, so it stays offline;
+# it receives the same NON-secret settings only so the desk header can show the extraction mode.
+# Pricing is passed by start_live_ai.sh per model (rates mirror scripts/evaluate_live.ts PRICES).
+x-live-ai: &live-ai
+  LIVE_AI_ENABLED: 'true'
+  AI_PROVIDER: gemini
+  EXTRACTION_MODEL: ${EXTRACTION_MODEL:-gemini-3.5-flash-lite}
+  AI_INPUT_USD_PER_MILLION: ${AI_INPUT_USD_PER_MILLION:-0.30}
+  AI_OUTPUT_USD_PER_MILLION: ${AI_OUTPUT_USD_PER_MILLION:-2.50}
+  AI_PRICING_VERSION: ${AI_PRICING_VERSION:-gemini-3.5-flash-lite-2026-10-28}
+  AI_RUN_BUDGET_USD: ${AI_RUN_BUDGET_USD:-5.00}
+  AI_ORDER_BUDGET_USD: ${AI_ORDER_BUDGET_USD:-0.25}  # worst-case reservation for gemini-3.8-flash at 32K output is ~$0.13
+services:
+  app:
+    environment: *live-ai
+  worker:
+    environment:
+      <<: *live-ai
+      GEMINI_API_KEY_FILE: /run/secrets/gemini_key
+    secrets: [gemini_key]
+    networks: [private, ai-egress]
+networks:
+  ai-egress: {}
+secrets:
+  gemini_key:
+    file: ../runtime/ai/gemini_key
