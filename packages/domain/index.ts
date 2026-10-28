@@ -85,6 +85,13 @@ function candidate(product: Product, method: CandidateMatch["method"], context: 
     score:method === "lexical" ? null : 1,catalogueVersion:product.catalogueVersion,customerId:method === "customer_alias" ? context.customer!.id : null,attributeConflicts:conflicts(line,product),evidenceIds:line.evidenceIds};
 }
 const acknowledgeable = new Set<ReasonCode>(["PRICE_MISMATCH","EXPIRED_PRICE_AGREEMENT","TOTAL_MISMATCH","INSUFFICIENT_STOCK","STALE_STOCK","DELIVERY_COMMITMENT_REQUIRED","AMBIGUOUS_DELIVERY_DATE","HISTORY_REQUIRES_CONFIRMATION","UNTRUSTED_INSTRUCTION","CONFLICTING_DOCUMENT_VERSIONS"]);
+// Live run 2 showed a model can silently return 0-1 lines for a 60-row PDF. Count tabular order rows
+// ("CODE  qty  unit  price") in the source text independently of the model and block when lines are missing.
+const ORDER_ROW = /^[ \t]*[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+[ \t]+-?\d+(?:\.\d+)?[ \t]+(?:each|packs?|pairs?|box(?:es)?|metres?|rolls?)\b/gim;
+export function lineCoverage(text: string, extractedLines: number): Reason | null {
+  const rows = text.match(ORDER_ROW)?.length ?? 0;
+  return rows > extractedLines ? reason("INCOMPLETE_EXTRACTION",`Source has ${rows} tabular order rows but only ${extractedLines} lines were extracted; check for missing lines`) : null;
+}
 export function applyResolutions(reasons: Reason[], resolutions: ValidationContext["resolutions"]): Reason[] {
   return reasons.map(r => {
     const resolution = resolutions?.find(v => v.code === r.code && v.lineId === r.lineId);

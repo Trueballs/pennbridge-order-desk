@@ -93,11 +93,52 @@ Models and prices (USD per 1M tokens, standard tier, text; override with `AI_INP
 
 Dry-run estimate (70 cases, heuristic from byte counts, no network): Haiku 5.5 about $0.04-$0.17 in total ($0.0006-$0.0024 per order); Gemini 3.5 Flash-Lite about $0.16-$0.77 ($0.0023-$0.011 per order); about 196k-313k input and 40k-272k output tokens. The high end assumes thinking tokens. These are estimates only; the live run records measured tokens and cost.
 
-Unverified before the first paid call: the Gemini request uses `generationConfig.responseJsonSchema` with `responseMimeType: application/json`, and the current docs pages retrieved only confirmed `responseMimeType`/`responseSchema` for generateContent. If Google rejects the field, the run stops at the first case with the error body. Anthropic structured output uses `output_config.format` with a schema normalized by the SDK's `zodOutputFormat`.
+The Gemini request uses `generationConfig.responseJsonSchema` with `responseMimeType: application/json`. Both full Gemini runs completed all 70 cases with no HTTP error on this field. The one HTTP 400 seen was an invalid API key. Anthropic structured output uses `output_config.format` with a schema normalized by the SDK's `zodOutputFormat`; no Anthropic live run is recorded in `results/live/`.
+
+## Live AI results (Gemini)
+
+Two full live runs used `gemini-3.5-flash-lite` through `GeminiProvider` with `prompts/order-interpreter.md`, on the same 70 visible synthetic cases: 42 email, 8 stateful and 20 PDF. The 8 stateful cases are diagnostic only in these runs; they are covered by the PostgreSQL suite. Both runs were made on 2026-10-28. Raw results are git-ignored in `results/live/`: run 1 is `run-2026-10-28T20-56-40-421Z` and run 2 is `run-2026-10-28T21-00-55-842Z` (`.json` and `.md`).
+
+| Measure | Run 1 | Run 2 |
+|---|---|---|
+| Setup | Baseline prompt with identifier-field fix (after a 6-case smoke test); output limit 8,192 tokens | Prompt fixes listed below; output limit 32,768 tokens |
+| Email overall (42 cases) | 32/42 (76.2%) | 37/42 (88.1%) |
+| Email intent / route / required flags / lines / customer | 40 / 36 / 39 / 34 / 41 | 41 / 39 / 41 / 41 / 42 |
+| PDF cases with all lines exact (20) | 16/20 | 18/20 |
+| PDF lines exact (286) | 46/286 (16.1%) | 167/286 (58.4%) |
+| Model or schema errors | 5: four MAX_TOKENS truncations (PDF-005, 010, 015, 020) and one schema-invalid reply (PB-047, intent outside the enum; rejected by zod) | 0 |
+| API latency p50 / p95 | 1.7 s / 14.1 s | 1.6 s / 3.1 s |
+| Tokens in / out | 95,955 / 71,054 | 107,295 / 63,000 |
+| Cost, 70 cases | $0.21 | $0.19 |
+| Cost per order | $0.0030 | $0.0027 |
+
+The PDF line figure is lower than the case count suggests because the two failing PDFs in run 2 are the 60-line documents. Together they hold 120 of the 286 labelled lines.
+
+Failure patterns found in run 1, and what changed:
+
+- Product codes were put into `manufacturerReference` or `customerAlias` instead of `sku`, causing catalogue misses. The prompt now places them in `sku`.
+- Descriptions were put into `sku`, which blocked description search.
+- The model changed a quantity of `-2` to `2` (PB-049). That would have hidden an invalid quantity. The prompt now requires the exact sign.
+- Lines were returned for a quote request and for conflicting attachments.
+- Four large multi-page PDFs were truncated at 8,192 output tokens (MAX_TOKENS). The output limit was raised to 32,768 tokens.
+
+Remaining failures in run 2:
+
+- **Silent line omission on long PDFs (most important open risk).** PDF-005 and PDF-015 are 60-line multi-page PDFs. The model returned 1 and 0 lines respectively, with no error. Schema validation cannot catch this, because the reply is valid. **Mitigated after run 2:** `lineCoverage` in `packages/domain/index.ts` counts tabular order rows (`CODE  qty  unit …`) in the source text independently of the model and adds a blocking `INCOMPLETE_EXTRACTION` reason when fewer lines were extracted. Replayed against the run 2 outputs it fires on PDF-005 and PDF-015, with 0 false positives across all 70 fixtures (`tests/line-coverage.test.ts`). It only covers tabular rows; omissions from prose orders are still left to the reviewer.
+- PB-015: the email said "6204 bearings" and the model added a suffix, `6204-2RS`, to `sku`. The catalogue lookup found no match, so no wrong product was selected, but the flag differed from the expected one.
+- PB-029: classified as an amendment rather than a new order (new shipping address).
+- PB-004, PB-006 and PB-007: routing and flag differences on address and description-only lines.
+
+Caveats:
+
+- The 70 fixtures are synthetic and visible, and the prompt was tuned on them. These are development scores, not held-out accuracy.
+- Human approval is still required for every order.
+- Measured spend across the five live runs in `results/live/` is about $0.42. That is two 6-case smoke runs, one of which stopped with HTTP 400 (invalid API key) on both attempted cases, plus runs 1 and 2.
+- Only the Gemini path has been run live.
 
 ## What these results establish
 
-These are visible synthetic development cases, not an untouched holdout. The 42-case email run is a parser/domain acceptance diagnostic; the separate 8-case run measures stateful service behavior with mock extraction and PostgreSQL; the PDF run measures machine-generated PDF text extraction plus deterministic mock parsing and source evidence references. None is AI accuracy, a production accuracy estimate, or a real-customer outcome. Scanned PDFs/OCR are not evaluated. No live AI call or paid API usage is included.
+These are visible synthetic development cases, not an untouched holdout. The 42-case email run is a parser/domain acceptance diagnostic; the separate 8-case run measures stateful service behavior with mock extraction and PostgreSQL; the PDF run measures machine-generated PDF text extraction plus deterministic mock parsing and source evidence references. None is AI accuracy, a production accuracy estimate, or a real-customer outcome. Scanned PDFs/OCR are not evaluated. The Gemini runs in the section above are the only live-model results. They are paid, use visible development fixtures, and are reported separately from the offline figures.
 
 ## Local system checks
 

@@ -4,7 +4,7 @@ Synthetic data only. Pennbridge is a fictional UK industrial wholesaler. Scenes 
 
 ## 1. Pitch
 
-Customers still send purchase orders as emails with PDF attachments, and someone retypes each line into the ERP. They check part numbers, pack sizes and agreed prices by hand, and the errors are expensive. Pennbridge Order Desk reads the email and its attachment, matches each line to the catalogue and the customer's agreed prices, and flags anything it cannot match or that disagrees with master data. The reviewer sees the source next to the draft. Nothing is approved automatically: a person approves one exact version of the draft, and only then does the desk produce a CSV for a quotation import into Odoo, a local test ERP. The demo uses a deterministic rule-based extractor, not a language model. A Claude adapter exists behind a flag, is off by default, and has not been benchmarked.
+Customers still send purchase orders as emails with PDF attachments, and someone retypes each line into the ERP. They check part numbers, pack sizes and agreed prices by hand, and the errors are expensive. Pennbridge Order Desk reads the email and its attachment, matches each line to the catalogue and the customer's agreed prices, and flags anything it cannot match or that disagrees with master data. The reviewer sees the source next to the draft. Nothing is approved automatically: a person approves one exact version of the draft, and only then does the desk produce a CSV for a quotation import into Odoo, a local test ERP. The demo uses a deterministic rule-based extractor, not a language model. A live Gemini adapter (`gemini-3.5-flash-lite`) also exists behind a flag and is off by default. In one benchmark on 70 visible synthetic cases it got 37 of 42 email cases fully right and 18 of 20 PDFs with every line exact, but it silently dropped lines on two 60-line PDFs; a row-count check added afterwards now blocks that. It cost about $0.0027 per order. These are development scores, not held-out accuracy.
 
 ## 2. Pre-demo checklist
 
@@ -18,7 +18,9 @@ docker compose -f infra/compose.yaml ps
 curl -s http://127.0.0.1:3087/api/health
 ```
 
-Expected: App, worker, Postgres, Mailpit and proxy are running. The health check returns `{"ok":true,"mode":"mock"}`.
+Expected: App, worker, Postgres, Mailpit and proxy are running. The health check returns `{"ok":true,"mode":"mock"}`. If the desk shows **502 Bad Gateway** after the app was rebuilt, run `docker compose -f infra/compose.yaml restart proxy`.
+
+The demo runs in mock mode with live AI off. Live mode can be turned on with `AI_PROVIDER=gemini` and `LIVE_AI_ENABLED=true`, with `GEMINI_API_KEY` in the environment. `infra/compose.yaml` currently sets `LIVE_AI_ENABLED: 'false'` in the shared app environment, so that line must be changed before the Compose stack can run live. Do not show live mode on the call unless it has been dry-run. The scenes below assume mock mode.
 
 Only needed for the Odoo step in Scene A:
 
@@ -132,7 +134,7 @@ Limit: the same PO sent as a different file is covered by an automated test (`PB
      | Worker (apps/worker)                     |
      |  parseInput: MIME, text, HTML, CSV, PDF  |
      |  extraction: MockProvider (default)      |
-     |     or LiveProvider (off, unbenchmarked) |
+     |     or live adapters (off by default)    |
      +------------------------------------------+
                         |
                         v
@@ -167,16 +169,16 @@ Limit: the same PO sent as a different file is covered by an automated test (`PB
 Mailbox polling could be done in n8n. I kept the rules in the app because approval, de-duplication and pricing need the same tests as the rest of the code. The project plan keeps n8n as an optional transport only; it must not own approvals or business rules. The mailbox receiver is a small container with no n8n (see `docs/TEST-INBOX.md`).
 
 **2. How do you contain hallucinations?**
-The demo has no language model in the loop. The mock extractor is rule-based. If the live adapter is enabled, its reply must match a schema and is re-validated before use. Every product must match a catalogue SKU through lookup. Nothing is silently substituted. Prices and quantities are checked against master data, and PDF lines keep the quoted source text with its page. A person approves the draft. The live adapter has no benchmark yet, so I cannot quote its accuracy.
+The demo has no language model in the loop. The mock extractor is rule-based. If the live adapter is enabled, its reply must match a schema and is re-validated before use. Every product must match a catalogue SKU through lookup. Nothing is silently substituted. Prices and quantities are checked against master data, and PDF lines keep the quoted source text with its page. A person approves the draft. The live Gemini adapter has one recorded benchmark on visible synthetic cases: in run 2, 37 of 42 email cases and 167 of 286 PDF lines were exact. Those are development numbers, not a held-out estimate. Deterministic validation and human approval contain errors that produce invalid or unmatched data. A silently shortened PDF is now caught by a separate row-count check (see Q9).
 
 **3. How do you handle idempotency and retries?**
 Three layers. Intake dedupes on the transport key and the file's SHA-256 hash, under advisory locks. Business duplicates are matched by customer and PO: identical content is marked duplicate, and changed content goes to amendment review. Approval binds to a version number and content hash, so any edit invalidates it. Export takes an idempotency key and writes one snapshot per approved version. Jobs use leases, so a crashed worker's job is reclaimed. The worker-crash check in `docs/SYSTEM-CHECKS.md` is one local test of this.
 
 **4. What does it cost to run?**
-In the demo, nothing: no model is called and `LIVE_AI_ENABLED=false`. For live runs, the code reserves the worst-case cost before each call, against a run cap and a per-order cap. The defaults in the plan are $5 per run and $0.10 per order. Pricing must be entered explicitly. No live benchmark has run, so I have no measured cost per order and will not quote one.
+In the demo, nothing: no model is called and `LIVE_AI_ENABLED=false`. For live runs, the code reserves the worst-case cost before each call, against a run cap and a per-order cap. The defaults in the plan are $5 per run and $0.10 per order. Pricing must be entered explicitly. The live Gemini benchmark measured about $0.0027 per order in run 2 ($0.19 for 70 cases, 107,295 input and 63,000 output tokens) and about $0.0030 per order in run 1. These are measured on the visible fixtures, not at production volume.
 
 **5. What is not verified?**
-Live model accuracy. Odoo browser file upload. Sender authentication. Scanned PDFs. Odoo posting from the desk (the desk only produces a file). Performance beyond one local sample. Production readiness.
+Live model accuracy on unseen orders; the one Gemini benchmark used visible fixtures the prompt was tuned on. Complete extraction of long PDFs (see Q9). Any Anthropic live path, since no run is recorded. Odoo browser file upload. Sender authentication. Scanned PDFs. Odoo posting from the desk (the desk only produces a file). Performance beyond one local sample. Production readiness.
 
 **6. How do I change a business rule?**
 Rules live in `packages/domain/index.ts` in the `validate` path. Examples: the £0.01 tolerance and `PRICE_MISMATCH` are around line 171; the 24-hour stock staleness check is around line 174; the total check is around line 182. Add a test in `tests/core-domain.test.ts`, then rerun `npx tsx scripts/evaluate.ts`. The `policies` block in `fixtures/context.json` is reference data. The domain code does not read it, so changing that block changes nothing.
@@ -187,9 +189,19 @@ Approval must be a human decision on a fixed version, and an automatic post woul
 **8. How do you know who sent the order?**
 You don't, from the email alone. The From header is not treated as proof. The account is chosen by a person (or the test harness for synthetic cases), and the desk shows the account on the draft. Unknown or unverified senders are flagged for review (`UNVERIFIED_SENDER` in the fixtures).
 
+**9. What did the live benchmark teach you?**
+Four things, all from the Gemini benchmark on visible synthetic fixtures (not a holdout). Details are in [EVALUATION.md](EVALUATION.md#live-ai-results-gemini).
+
+- **A quietly changed sign.** In run 1 the model turned a quantity of `-2` into `2` (PB-049). A positive 2 looks like a valid line, so validation alone would not have caught it. The benchmark's field scoring did. The prompt now requires the exact sign, and PB-049 passed in run 2.
+- **Field confusion.** Product codes went into `manufacturerReference` or `customerAlias` instead of `sku`, causing catalogue misses. Descriptions went into `sku`, which blocked description search. The prompt now states where each value belongs.
+- **Truncation.** Four large multi-page PDFs hit the 8,192-token output limit in run 1. Raising the limit to 32,768 fixed PDF-010 and PDF-020, which now pass exactly. PDF-005 and PDF-015 no longer error, but they still return too few lines.
+- **Silent line omission.** PDF-005 and PDF-015 are 60-line PDFs. In run 2 the model returned 1 and 0 lines, with no error. This is the most important open risk.
+
+What contained them: the reply is checked against a zod schema, and the one schema-invalid reply (PB-047) was rejected. Catalogue lookup does not substitute products. When PB-015's invented suffix `6204-2RS` matched nothing, no wrong product was chosen and the line was flagged. Human approval is still required for every order. The silent omission is different. The reply is valid and every returned line checks out, so validation passes and only a reviewer comparing the source PDF with the lines would notice. So I added a deterministic check that doesn't trust the model: it counts the order rows in the PDF text itself and blocks the order when the model returned fewer lines (`lineCoverage` in `packages/domain/index.ts`). Replayed on the run 2 outputs it catches both shortened PDFs, with no false alarms on the 70 test orders. The lesson: when a model fails quietly, add an independent check instead of a better prompt.
+
 ## 6. Honest limitations
 
-- **Mock mode.** Extraction is a deterministic rule-based parser. Live AI is off unless explicitly enabled and configured, and no live benchmark has been run.
+- **Mock mode by default.** Extraction is a deterministic rule-based parser. Live Gemini extraction is off unless explicitly enabled and configured. Its one recorded benchmark (run 2) got 37 of 42 email cases and 18 of 20 PDFs with every line exact, but only 167 of 286 PDF lines; it silently omitted lines on two 60-line PDFs, which a row-count check added afterwards now blocks. It cost about $0.0027 per order. See [EVALUATION](EVALUATION.md#live-ai-results-gemini).
 - **Local only.** It runs on Docker Desktop on this machine, bound to localhost. There is no hosting and no public access.
 - **Synthetic data only.** Fictional customers, products and prices. The 50 email and 20 PDF cases are development fixtures, not a held-out test. Results are not production accuracy.
 - **Sender not authenticated.** The desk does not prove who sent an email. A person selects the account.

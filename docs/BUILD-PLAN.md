@@ -22,7 +22,7 @@ Oscar authorized step1 of the portfolio follow-up: a dedicated real test inbox, 
 
 Implementation choices and remaining limits:
 - Initial Odoo/desk master consistency is verified from a shared synthetic seed. Continuous Odoo-to-desk change synchronization is not implemented.
-- SQL/domain code performs retrieval. No second LLM matching agent or vector database is needed for this release. The draft prompt describes the future bounded matching contract; the live extraction adapter is present but unbenchmarked.
+- SQL/domain code performs retrieval. No second LLM matching agent or vector database is needed for this release. The draft prompt describes the future bounded matching contract; live extraction adapters (Claude, Gemini) are present; Gemini is benchmarked in `docs/EVALUATION.md`.
 - Default Docker networks deny worker outbound access. Live AI needs a deliberately configured provider connection, dedicated key, current model/pricing verification and budget; it is not enabled by simply changing the UI.
 - The70 email/PDF scenarios are synthetic development fixtures, not a held-out accuracy benchmark. Neither real-customer production readiness nor commercial ROI is established.
 - Odoo browser upload was blocked by Chrome extension file-URL permissions. The exact app CSV passed Odoo's real import service in dry-run, import and reimport; the resulting quotation was checked in the browser. No browser permissions were expanded.
