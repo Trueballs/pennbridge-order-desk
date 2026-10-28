@@ -164,7 +164,7 @@ Limit: the same PO sent as a different file is covered by an automated test (`PB
 ## 5. Questions you'll be asked
 
 **1. Why not n8n?**
-Mailbox polling could be done in n8n. I kept the rules in the app because approval, de-duplication and pricing need the same tests as the rest of the code. The project plan keeps n8n as an optional transport only; it must not own approvals or business rules. The mailbox receiver is a small container with no n8n (see `docs/TEST-INBOX.md`). The live mailbox is not connected yet.
+Mailbox polling could be done in n8n. I kept the rules in the app because approval, de-duplication and pricing need the same tests as the rest of the code. The project plan keeps n8n as an optional transport only; it must not own approvals or business rules. The mailbox receiver is a small container with no n8n (see `docs/TEST-INBOX.md`).
 
 **2. How do you contain hallucinations?**
 The demo has no language model in the loop. The mock extractor is rule-based. If the live adapter is enabled, its reply must match a schema and is re-validated before use. Every product must match a catalogue SKU through lookup. Nothing is silently substituted. Prices and quantities are checked against master data, and PDF lines keep the quoted source text with its page. A person approves the draft. The live adapter has no benchmark yet, so I cannot quote its accuracy.
@@ -176,7 +176,7 @@ Three layers. Intake dedupes on the transport key and the file's SHA-256 hash, u
 In the demo, nothing: no model is called and `LIVE_AI_ENABLED=false`. For live runs, the code reserves the worst-case cost before each call, against a run cap and a per-order cap. The defaults in the plan are $5 per run and $0.10 per order. Pricing must be entered explicitly. No live benchmark has run, so I have no measured cost per order and will not quote one.
 
 **5. What is not verified?**
-Live model accuracy. Odoo browser file upload. Sender authentication. A real external mailbox end to end. Scanned PDFs. Odoo posting from the desk (the desk only produces a file). Performance beyond one local sample. Production readiness.
+Live model accuracy. Odoo browser file upload. Sender authentication. Scanned PDFs. Odoo posting from the desk (the desk only produces a file). Performance beyond one local sample. Production readiness.
 
 **6. How do I change a business rule?**
 Rules live in `packages/domain/index.ts` in the `validate` path. Examples: the £0.01 tolerance and `PRICE_MISMATCH` are around line 171; the 24-hour stock staleness check is around line 174; the total check is around line 182. Add a test in `tests/core-domain.test.ts`, then rerun `npx tsx scripts/evaluate.ts`. The `policies` block in `fixtures/context.json` is reference data. The domain code does not read it, so changing that block changes nothing.
@@ -194,6 +194,6 @@ You don't, from the email alone. The From header is not treated as proof. The ac
 - **Synthetic data only.** Fictional customers, products and prices. The 50 email and 20 PDF cases are development fixtures, not a held-out test. Results are not production accuracy.
 - **Sender not authenticated.** The desk does not prove who sent an email. A person selects the account.
 - **Odoo step is manual.** The desk produces a CSV. A person imports it into Odoo. Browser upload was not verified. The import itself was verified through Odoo's import service.
-- **Mailbox not live.** The IMAP receiver is built and tested against simulated transport. It is not connected to a real account.
+- **Mailbox is a local poller.** A dedicated Gmail test inbox is connected over IMAP and was verified end to end with a real email on 2026-10-28. It only runs while this Mac and Docker are up, and polls every 60 seconds.
 - **PDFs only machine-generated.** Scanned PDFs and OCR are not supported.
 - **Current counts** (from `docs/EVALUATION.md`): 42 email cases stateless, 8 stateful cases with PostgreSQL, 20 PDF cases with 286 labelled lines. These are offline mock-mode results on the same fixtures the code was built against.

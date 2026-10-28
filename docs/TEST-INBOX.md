@@ -1,6 +1,6 @@
 # Dedicated test inbox
 
-Status: receiving code and local configuration are prepared; **no external mailbox has been selected, authenticated or tested yet**. No paid services or AI calls were used. This is a small IMAP receiver in its own Docker container, not an n8n workflow. Existing n8n services are untouched.
+Status: **connected and verified end to end on 2026-10-28** with the dedicated Gmail account `pennbridgeorderstest@gmail.com` (app password, IMAP). A real email sent from another account arrived, was submitted by the receiver and processed by the worker into a `needs_review` order (customer selection is left to the reviewer by design). No paid services or AI calls were used. This is a small IMAP receiver in its own Docker container, not an n8n workflow. Existing n8n services are untouched.
 
 ## Connect a mailbox
 
@@ -44,6 +44,8 @@ This is a synthetic portfolio test, not a real purchase.
 Optionally attach a PDF from `fixtures/pdf/`. Send one consistent order per message. Polling runs every 60 seconds; the desk refreshes its queue every 15 seconds. Open http://127.0.0.1:3087 and review the new email. The connector does not authenticate the sender as a customer: select the appropriate synthetic customer (e.g. Alderwick/C001), select its delivery address, save and review validation. Do not treat the email's From header as authority.
 
 Processing still uses the deterministic mock parser. This step tests real email transport; it does not establish live AI accuracy.
+
+Gmail spam: a new account may file the first test emails as Spam. The receiver reads only `INBOX`; mark the email **Not spam** and it is picked up on the next poll (moving it gives it a new INBOX UID above the checkpoint).
 
 ## Behavior and isolation
 
