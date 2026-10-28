@@ -12,6 +12,16 @@ Classify intent: new_order, amendment, cancellation, quote_request, enquiry, non
 
 Extract explicitly stated customer references, PO reference, requested delivery wording, address, product identifiers, descriptions, quantities, units, pack counts and customer-quoted prices. Unknown values are null, never invented. Customer-supplied prices are claims to check, not authoritative prices. Customer authentication is provided by the application; a display name is not proof of identity.
 
+Product identifier fields:
+- `sku`: a product code as written by the customer (for example `FB-0830-A2-100`, `BR-6204-2RS`, `6204-2RS`). The application checks it against Pennbridge SKUs and then the customer's own aliases. Copy it exactly; do not normalise or guess.
+- `manufacturerReference`: a manufacturer or standard part designation (for example bearing `6204-2RS`, or a code labelled "mfr ref"). A standard designation may be in both `sku` and `manufacturerReference`.
+- `customerAlias`: only when the source explicitly labels the code as the customer's own internal part number (for example "our part no.").
+- If a line has no code-like identifier (only words such as "M8 x 35 mm A2 stainless hex bolts" or "6204 bearings"), set all three to null and put the words in `description`; the application searches the catalogue by description. Never put a description in `sku`.
+
+Quantities: copy the number exactly as written, including a minus sign or zero. Never correct, round or drop the sign of an invalid quantity; the application flags it.
+
+Lines: return order lines only for an active order request (new_order or amendment). For quote_request, enquiry, non_order and cancellation return no lines. If two documents in the message give conflicting quantities or items for the same order, return no lines and the reason CONFLICTING_DOCUMENT_VERSIONS; a reviewer chooses.
+
 Preserve distinctions between item, pair, box, pack, metre and roll. Do not infer pack size or substitute a unit. Extract dimensions, material, grade, bearing suffix and other critical attributes exactly. A relative date is recorded literally; only the application's date resolver can propose a date using received_at and Europe/London, and unresolved ambiguity remains flagged.
 
 ## Matching/search contract

@@ -137,7 +137,8 @@ export class GeminiProvider implements ExtractionProvider {
     const system=await readFile(resolve(process.cwd(),'prompts/order-interpreter.md'),'utf8');
     const schema=zodOutputFormat(ExtractedOrderSchema).schema;
     const content=JSON.stringify({text:input.text,documents:input.documents.map(d=>({id:d.id,filename:d.filename})),evidence:input.evidence});
-    const maxInput=Buffer.byteLength(content+system+JSON.stringify(schema))+2048;const maxOutput=8192;
+    // Multi-page PDFs with ~100 lines need well over 8K output tokens (truncated at 8192 in the first live run).
+    const maxInput=Buffer.byteLength(content+system+JSON.stringify(schema))+2048;const maxOutput=32768;
     const reserved=new Decimal(maxInput).mul(inRate).add(new Decimal(maxOutput).mul(outRate)).div(1e6).toFixed(6);
     const reserve=this.opts.budget?.reserve??((usd:string)=>reserveModelBudget(this.opts.runId,this.opts.orderId,usd,process.env.AI_RUN_BUDGET_USD||'5.00',process.env.AI_ORDER_BUDGET_USD||'0.10'));
     const settle=this.opts.budget?.settle??settleModelBudget;

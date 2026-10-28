@@ -140,11 +140,12 @@ async function main() {
   let next = 0;
   const runTask = async (t: Task) => {
     let usage: { latencyMs: number; inputTokens: number; outputTokens: number; costUsd: string } | null = null;
+    let modelLines: unknown = null;
     let failure: any = null;
     const wrapped: ExtractionProvider = {
       mode: 'live',
       extract: async input => {
-        try { const r = await live.extract(input); usage = r.usage as any; return r; } catch (e: any) { failure = e; throw e; }
+        try { const r = await live.extract(input); usage = r.usage as any; modelLines = r.extracted.lines.map(l => ({ sku: l.sku, manufacturerReference: l.manufacturerReference, customerAlias: l.customerAlias, quantity: l.quantity, unit: l.unit, rawText: l.rawText.slice(0, 160) })); return r; } catch (e: any) { failure = e; throw e; }
       },
     };
     const base = { suite: t.suite, id: t.id };
@@ -162,6 +163,8 @@ async function main() {
     }
     const bill = usage ?? failure;
     if (bill && typeof bill.latencyMs === 'number') Object.assign(rec, { apiLatencyMs: bill.latencyMs, inputTokens: bill.inputTokens, outputTokens: bill.outputTokens, costUsd: Number(bill.costUsd) });
+    // Raw model lines make failed cases diagnosable without another paid run.
+    if (rec.outcome === 'fail') (rec as any).modelLines = modelLines;
     if (failure?.code === 'BUDGET_STOP') rec.outcome = 'skipped';
     if (rec.error) rec.error = redact(rec.error).slice(0, 500);
     // A rejected request (bad key, model or schema) will fail identically for every case: stop spending.
