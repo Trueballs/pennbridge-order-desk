@@ -4,6 +4,10 @@ Prepared and executed 28 October 2026. **Local mock-mode build implemented and e
 
 This is the canonical execution plan. It implements the research correction in PROJECT-SPEC.md and takes precedence over that document's older milestone order. The specification remains the source for business rules; this document defines implementation order, owners, model selection and completion gates. The original phase descriptions below record the approved plan. The status table here takes precedence over their prospective wording. No paid live AI calls were made.
 
+## Follow-up: dedicated inbox — 28 October 2026
+
+Oscar authorized step1 of the portfolio follow-up: a dedicated real test inbox, with cost efficiency. Implemented a small opt-in IMAP receiving container, separate scoped intake token, read-only TLS fetching, new-mail checkpoint/retry, subject filter and automatic queue refresh. Setup is local and interactive; no n8n subscription or hosted service is needed. Mailbox selection/authentication and a real end-to-end email are still pending user input. Live AI remains deferred. See TEST-INBOX.md.
+
 ## Execution status — 28 October 2026
 
 | Area | Delivered / evidence |

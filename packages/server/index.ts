@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import { compare } from "bcryptjs";
 import type { PoolClient } from "pg";
 import { AddressSchema, ExtractedOrderSchema, IntakeRequestSchema, ReasonCodeSchema, type Address, type AmendmentRequest, type ApproveRequest, type CancelRequest, type Customer, type Document, type DocumentEvidence, type EditOrderRequest, type ExportRequest, type ExportSnapshot, type ExtractedOrder, type ExtractionProvider, type IntakeRequest, type IntakeResponse, type Job, type HistoricalSuggestion, type OrderDetail, type OrderListQuery, type OrderListResponse, type Product, type Session, type SourceMessage, type Unit, type ValidatedDraft, type VerifyExportRequest } from "@pennbridge/contracts";
@@ -33,6 +34,11 @@ export async function session(token: string | null | undefined): Promise<Session
 }
 export async function logout(token: string | null | undefined): Promise<void> { if (token) await pool.query("DELETE FROM sessions WHERE token_hash=$1",[sha256(token)]); }
 export function ingestionSession(token: string | null): Session | null {
+  const mailboxTokenFile=process.env.MAILBOX_INGESTION_TOKEN_FILE;
+  if(mailboxTokenFile && token){
+    const expectedMailboxToken=readFileSync(mailboxTokenFile,"utf8").trim();
+    if(expectedMailboxToken.length>=32 && sha256(token)===sha256(expectedMailboxToken)) return {userId:"mailbox-ingestion",email:"mailbox@pennbridge.example",name:"Dedicated test mailbox",role:"ingestion",expiresAt:new Date(Date.now()+3600000).toISOString()};
+  }
   const expected=process.env.INGESTION_TOKEN;
   if (!expected || !token || sha256(token)!==sha256(expected)) return null;
   return {userId:"synthetic-ingestion",email:"ingestion@pennbridge.example",name:"Synthetic ingestion",role:"ingestion",expiresAt:new Date(Date.now()+3600000).toISOString()};
@@ -288,7 +294,9 @@ export async function stats(actor:Session) {
   return {counts,totalOrders:statuses.rows.reduce((n,r)=>n+r.count,0),catalogueCount:catalogue.rows[0].count,pendingJobs:jobs.rows[0].count,mode:process.env.LIVE_AI_ENABLED==="true"?"live":"mock",modelCalls:usage.rowCount??0,modelUsage:usage.rows.map(r=>r.data)};
 }
 export async function intake(actor:Session,input:IntakeRequest):Promise<IntakeResponse> {
-  allow(actor,["reviewer","admin","ingestion"]);await initialiseDatabase();input=IntakeRequestSchema.parse(input);
+  allow(actor,["reviewer","admin","ingestion"]);input=IntakeRequestSchema.parse(input);
+  if(actor.userId==="mailbox-ingestion" && (input.channel!=="email" || input.trustedCustomerId)) throw new ServiceError("FORBIDDEN","Mailbox intake cannot assert customer identity or use another source channel",403);
+  await initialiseDatabase();
   if(input.trustedCustomerId && actor.role!=="admin" && actor.role!=="ingestion" && input.channel!=="upload" && input.channel!=="manual")throw new ServiceError("FORBIDDEN","Only the authorized harness can supply trusted synthetic customer identity",403);
   if(!/^[A-Za-z0-9+/]*={0,2}$/.test(input.contentBase64))throw new ServiceError("VALIDATION_FAILED","Invalid base64 content",400);
   const content=Buffer.from(input.contentBase64,"base64");if(content.length>10*1024*1024)throw new ServiceError("FILE_TOO_LARGE","Upload exceeds 10 MB",413);if(!content.length)throw new ServiceError("EMPTY_DOCUMENT","Empty upload",400);
@@ -307,7 +315,7 @@ export async function intake(actor:Session,input:IntakeRequest):Promise<IntakeRe
     const storedInput={filename:input.filename,mediaType:input.mediaType,documentId:docId};
     await client.query("INSERT INTO messages(id,transport_key,content_hash,data,intake) VALUES($1,$2,$3,$4,$5)",[messageId,transportKey,hash,source,storedInput]);
     const storagePath=path.join(storageRoot,docId);await writeFile(storagePath,content,{mode:0o600});
-    const document:Document={id:docId,messageId,filename:input.filename,mediaType:input.mediaType,sizeBytes:content.length,contentHash:hash,kind:input.channel==="synthetic_email"?"email":"upload",parser:null,pageCount:null,text:null,createdAt:now};
+    const document:Document={id:docId,messageId,filename:input.filename,mediaType:input.mediaType,sizeBytes:content.length,contentHash:hash,kind:["synthetic_email","email","mailpit"].includes(input.channel)?"email":"upload",parser:null,pageCount:null,text:null,createdAt:now};
     await client.query("INSERT INTO documents(id,message_id,data,storage_path) VALUES($1,$2,$3,$4)",[docId,messageId,document,storagePath]);
     const order:ValidatedDraft={id:orderId,version:1,contentHash:"",sourceMessageId:messageId,customerId:source.trustedCustomerId,customerName:null,intent:"unknown",status:"received",poNumber:null,relatedOrderId:null,revision:null,requestedDeliveryDate:null,shippingAddressId:null,currency:"GBP",catalogueVersion:CATALOGUE_VERSION,lines:[],reasons:[],total:"0.00",approval:null,createdAt:now,updatedAt:now,processingMode:"mock"};order.contentHash=contentHash(order);
     await saveOrder(client,order);await client.query("INSERT INTO jobs(id,type,message_id,order_id,status) VALUES($1,'process_message',$2,$3,'queued')",[jobId,messageId,orderId]);await audit(client,orderId,actor,"intake.received",1,{messageId,channel:input.channel});

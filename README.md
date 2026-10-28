@@ -73,3 +73,7 @@ The 42-case stateless run passed all intent, route, required-flag, line-field, a
 - [Scale fixture manifest](fixtures/scale/manifest.json)
 
 The completed local demo includes Odoo quotation **S00007** from PDF-001, checked at **£61.40** and recorded as import verified in the desk. A replay after review is held for amendment review and cannot be approved as another new order. The Odoo import-service proof and browser-upload limitation are documented in `docs/ODOO-IMPORT.md`.
+
+## Receive email from a dedicated test mailbox
+
+An opt-in IMAP receiver is prepared; authentication and an actual external test email are still pending. Follow [TEST-INBOX.md](docs/TEST-INBOX.md). It runs locally without n8n or paid hosting, preserves the email and attachments, and keeps customer identity unresolved for review. Live AI remains disabled.

@@ -12,7 +12,7 @@ COPY fixtures/scale ./fixtures/scale
 COPY fixtures/pdf ./fixtures/pdf
 COPY fixtures/emails ./fixtures/emails
 RUN npm run build
-RUN mkdir -p /app/runtime/storage && chown -R node:node /app/runtime
+RUN mkdir -p /app/runtime/storage /app/runtime/mailbox-state && chown -R node:node /app/runtime
 USER node
 EXPOSE 3087
 CMD ["npm","run","start"]

@@ -1,0 +1,37 @@
+# Opt-in receiving bridge: compose this WITH compose.yaml after local configuration.
+services:
+  app:
+    environment:
+      MAILBOX_INGESTION_TOKEN_FILE: /run/secrets/mailbox_token
+    secrets: [mailbox_token]
+    networks: [private, mailbox-intake]
+  mailbox:
+    image: pennbridge-app:local
+    command: [npm, run, mailbox]
+    depends_on: [app]
+    restart: unless-stopped
+    environment:
+      MAILBOX_CONFIG_FILE: /run/mailbox/config.json
+      MAILBOX_PASSWORD_FILE: /run/secrets/mailbox_password
+      MAILBOX_TOKEN_FILE: /run/secrets/mailbox_token
+      MAILBOX_STATE_FILE: /app/runtime/mailbox-state/checkpoint.json
+      MAILBOX_INTAKE_URL: http://app:3087/api/intake
+    volumes:
+      - ../runtime/mailbox/config.json:/run/mailbox/config.json:ro
+      - mailbox-state:/app/runtime/mailbox-state
+    secrets: [mailbox_password, mailbox_token]
+    networks: [mailbox-intake, mailbox-outbound]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+networks:
+  mailbox-intake: {internal: true}
+  mailbox-outbound: {}
+volumes:
+  mailbox-state:
+secrets:
+  mailbox_password:
+    file: ../runtime/mailbox/password
+  mailbox_token:
+    file: ../runtime/mailbox/token

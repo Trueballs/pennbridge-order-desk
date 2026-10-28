@@ -116,11 +116,11 @@ export default function Home() {
   }, [session,selectedId,detail?.order.status,refreshDetail,refreshOrders]);
   const appMode = (stats?.mode ?? detail?.order.processingMode ?? "unknown").toUpperCase();
   useEffect(() => {
-    if (!session || activeJobs === 0) return;
+    if (!session) return;
     const timer = window.setInterval(() => {
-      void refreshOrders("");
+      void refreshOrders();
       request<DeskStats>("/api/stats").then(setStats).catch(error => setToast(`Could not refresh workspace stats: ${message(error)}`));
-    }, 6000);
+    }, activeJobs > 0 ? 6000 : 15000);
     return () => window.clearInterval(timer);
   }, [session, activeJobs, refreshOrders]);
   const isReviewer = session?.role === "reviewer" || session?.role === "admin";

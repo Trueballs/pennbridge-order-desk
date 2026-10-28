@@ -65,7 +65,7 @@ export const DocumentEvidenceSchema = z.object({
   "Evidence end must follow start");
 export type DocumentEvidence = z.infer<typeof DocumentEvidenceSchema>;
 export const SourceMessageSchema = z.object({
-  id: IdSchema, channel: z.enum(["manual", "upload", "synthetic_email", "mailpit", "api"]),
+  id: IdSchema, channel: z.enum(["manual", "upload", "synthetic_email", "mailpit", "api", "email"]),
   externalMessageId: z.string().max(500).nullable(), transportKey: IdSchema, contentHash: HashSchema,
   receivedAt: TimestampSchema, sender: z.string().max(320).nullable(), subject: z.string().max(1000),
   trustedCustomerId: IdSchema.nullable(), identitySource: z.enum(["local_reviewer", "synthetic_harness", "trusted_connector", "unverified"]),

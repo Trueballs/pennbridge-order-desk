@@ -1,8 +1,6 @@
 # Local sandbox design
 
-Status: design only. Docker CLI, Compose and running engine were checked on 2026-10-28 (engine 29.6.1). No images pulled or containers launched for this project.
-
-The current [build plan](BUILD-PLAN.md) adds an optional local Odoo integration profile for real quotation-import verification and makes n8n optional for the first release. Its scope and execution sequence take precedence over the earlier fixture-sink-only design below. Implementation remains pending Oscar's “go.”
+Status: local app/worker/PostgreSQL/Mailpit and separate Odoo are implemented and tested; see BUILD-PLAN.md and SYSTEM-CHECKS.md. A dedicated-mailbox receiving bridge is now prepared as an opt-in Compose overlay (TEST-INBOX.md). No external mailbox has yet been connected. The earlier design below is historical where it conflicts with those current documents.
 
 ## Proposed first environment
 
