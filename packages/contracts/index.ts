@@ -32,7 +32,7 @@ export const ReasonCodeSchema = z.enum([
   "UNSUPPORTED_FORMAT", "FILE_TOO_LARGE", "DOCUMENT_TOO_LONG", "EMPTY_DOCUMENT", "INVALID_STRUCTURED_INPUT",
   "PARSING_FAILED", "MODEL_UNAVAILABLE", "MODEL_OUTPUT_INVALID", "MODEL_TIMEOUT", "BUDGET_EXCEEDED",
   "MISSING_CUSTOMER", "MISSING_UNIT", "AMBIGUOUS_MATCH", "SEARCH_BUDGET_EXHAUSTED", "STALE_CATALOGUE",
-  "STALE_VERSION", "APPROVAL_REQUIRED", "APPROVAL_INVALIDATED", "FORBIDDEN", "NOT_FOUND", "VALIDATION_FAILED",
+  "STALE_VERSION", "APPROVAL_REQUIRED", "APPROVAL_INVALIDATED", "FORBIDDEN", "NOT_FOUND", "VALIDATION_FAILED", "INTERNAL_ERROR",
 ]);
 export type ReasonCode = z.infer<typeof ReasonCodeSchema>;
 export const ReasonSchema = z.object({
@@ -68,7 +68,7 @@ export const SourceMessageSchema = z.object({
   id: IdSchema, channel: z.enum(["manual", "upload", "synthetic_email", "mailpit", "api", "email"]),
   externalMessageId: z.string().max(500).nullable(), transportKey: IdSchema, contentHash: HashSchema,
   receivedAt: TimestampSchema, sender: z.string().max(320).nullable(), subject: z.string().max(1000),
-  trustedCustomerId: IdSchema.nullable(), identitySource: z.enum(["local_reviewer", "synthetic_harness", "trusted_connector", "unverified"]),
+  trustedCustomerId: IdSchema.nullable(), identitySource: z.enum(["local_reviewer", "synthetic_harness", "trusted_connector", "sender_mapping", "unverified"]),
   documentIds: z.array(IdSchema), duplicateOfMessageId: IdSchema.nullable(),
 }).strict();
 export type SourceMessage = z.infer<typeof SourceMessageSchema>;
@@ -137,6 +137,15 @@ export const ApprovalSchema = z.object({
   approvedBy: IdSchema, approvedAt: TimestampSchema, invalidatedAt: TimestampSchema.nullable(),
 }).strict();
 export type Approval = z.infer<typeof ApprovalSchema>;
+/** A sender->customer mapping that was found but is not trusted: shown to the reviewer, never applied automatically. */
+export const RemovedLineSchema = z.object({ id: IdSchema, position: z.number().int().positive(), sku: z.string().nullable(), description: z.string(), quantity: SignedDecimalSchema.nullable(), unit: UnitSchema.nullable(), reason: z.string().max(2000), removedBy: IdSchema, removedAt: TimestampSchema }).strict();
+export type RemovedLine = z.infer<typeof RemovedLineSchema>;
+export const SuggestedCustomerSchema = z.object({
+  customerId: IdSchema, customerName: z.string(), mappingId: IdSchema.nullable(),
+  matchedOn: z.enum(["email", "domain", "approved_sender"]), sender: z.string().max(320),
+  note: z.string().max(500).nullable(),
+}).strict();
+export type SuggestedCustomer = z.infer<typeof SuggestedCustomerSchema>;
 export const ValidatedDraftSchema = z.object({
   id: IdSchema, version: z.number().int().positive(), contentHash: HashSchema,
   sourceMessageId: IdSchema, customerId: IdSchema.nullable(), customerName: z.string().nullable(),
@@ -146,6 +155,11 @@ export const ValidatedDraftSchema = z.object({
   lines: z.array(DraftLineSchema).max(100), reasons: z.array(ReasonSchema), total: MoneySchema,
   approval: ApprovalSchema.nullable(), createdAt: TimestampSchema, updatedAt: TimestampSchema,
   processingMode: z.enum(["manual", "structured", "mock", "live"]),
+  senderEmail: z.string().max(320).nullable().optional(), subject: z.string().max(1000).nullable().optional(),
+  /** Price-agreement date (Europe/London calendar day of receipt), fixed for the life of the order. */
+  pricingDate: DateSchema.optional(), suggestedCustomer: SuggestedCustomerSchema.nullable().optional(),
+  /** Lines a reviewer deliberately removed (audited with a reason); kept so the removal stays visible. */
+  removedLines: z.array(RemovedLineSchema).optional(),
 }).strict();
 export type ValidatedDraft = z.infer<typeof ValidatedDraftSchema>;
 export const ExportLineSchema = z.object({
@@ -158,9 +172,10 @@ export const ExportSnapshotSchema = z.object({
   customerExternalId: IdSchema, shippingAddressExternalId: IdSchema, poNumber: z.string(), currency: CurrencySchema,
   lines: z.array(ExportLineSchema).min(1), total: MoneySchema,
   mappingVersion: IdSchema, artifactHash: HashSchema, filename: z.string(),
-  state: z.enum(["prepared", "downloaded", "import_verified"]), preparedBy: IdSchema, preparedAt: TimestampSchema,
+  state: z.enum(["prepared", "downloaded", "import_verified", "voided"]), preparedBy: IdSchema, preparedAt: TimestampSchema,
   downloadedAt: TimestampSchema.nullable(), verifiedAt: TimestampSchema.nullable(),
   verifiedBy: IdSchema.nullable(), quotationReference: z.string().nullable(),
+  voidedAt: TimestampSchema.nullable().optional(), voidedBy: IdSchema.nullable().optional(), voidReason: z.string().nullable().optional(),
 }).strict();
 export type ExportSnapshot = z.infer<typeof ExportSnapshotSchema>;
 
@@ -234,16 +249,37 @@ export const ApproveRequestSchema = z.object({ expectedVersion: z.number().int()
 export const ExportRequestSchema = z.object({ expectedVersion: z.number().int().positive(), idempotencyKey: IdSchema }).strict();
 export const CancelRequestSchema = z.object({ expectedVersion: z.number().int().positive(), reason: z.string().min(1).max(2000) }).strict();
 export const AmendmentRequestSchema = z.object({ expectedVersion: z.number().int().positive(), sourceMessageId: IdSchema }).strict();
-export const VerifyExportRequestSchema = z.object({ quotationReference: z.string().min(1).max(200) }).strict();
+export const VerifyExportRequestSchema = z.object({ quotationReference: z.string().trim().min(1).max(200) }).strict();
+export const VoidExportRequestSchema = z.object({ reason: z.string().trim().min(1).max(2000) }).strict();
+export const AddLineRequestSchema = z.object({
+  expectedVersion: z.number().int().positive(),
+  line: z.object({ productId: IdSchema.nullable().optional(), sku: z.string().trim().max(200).nullable().optional(), description: z.string().trim().min(1).max(4000),
+    quantity: PositiveDecimalSchema, unit: UnitSchema, quotedUnitPrice: MoneySchema.nullable().optional() }).strict(),
+  reason: z.string().trim().min(1).max(2000),
+}).strict();
+export const RemoveLineRequestSchema = z.object({ expectedVersion: z.number().int().positive(), reason: z.string().trim().min(1).max(2000) }).strict();
+export const ReprocessRequestSchema = z.object({ expectedVersion: z.number().int().positive() }).strict();
+export const AssignCustomerRequestSchema = z.object({ expectedVersion: z.number().int().positive(), customerId: IdSchema }).strict();
+export const SenderMappingInputSchema = z.object({ kind: z.enum(["email", "domain"]), value: z.string().trim().min(1).max(320), customerId: IdSchema, trusted: z.boolean().default(false) }).strict();
+export const SenderMappingSchema = z.object({ id: IdSchema, kind: z.enum(["email", "domain"]), value: z.string(), customerId: IdSchema, customerName: z.string().nullable(), trusted: z.boolean(), createdBy: z.string().nullable(), createdAt: TimestampSchema }).strict();
+export type VoidExportRequest = z.infer<typeof VoidExportRequestSchema>;
+export type AddLineRequest = z.infer<typeof AddLineRequestSchema>;
+export type RemoveLineRequest = z.infer<typeof RemoveLineRequestSchema>;
+export type ReprocessRequest = z.infer<typeof ReprocessRequestSchema>;
+export type AssignCustomerRequest = z.infer<typeof AssignCustomerRequestSchema>;
+export type SenderMappingInput = z.infer<typeof SenderMappingInputSchema>;
+export type SenderMapping = z.infer<typeof SenderMappingSchema>;
 export const ApiErrorSchema = z.object({ error: z.object({ code: ReasonCodeSchema, message: z.string(), issues: z.array(z.object({ path: z.string(), message: z.string() })).optional() }) });
 export type ApiError = z.infer<typeof ApiErrorSchema>;
-export const OrderListQuerySchema = z.object({ status: OrderStatusSchema.optional(), limit: z.coerce.number().int().min(1).max(100).default(50), cursor: IdSchema.optional() });
+/** `cursor` is opaque (created_at + id, newest first). `q` is a case-insensitive AND-of-terms search over PO, customer, sender, subject, order id, SKUs and descriptions. Dates are Europe/London calendar days. */
+export const OrderListQuerySchema = z.object({ status: OrderStatusSchema.optional(), limit: z.coerce.number().int().min(1).max(100).default(50), cursor: z.string().max(300).optional(),
+  q: z.string().trim().max(100).optional(), customerId: IdSchema.optional(), dateFrom: DateSchema.optional(), dateTo: DateSchema.optional() });
 export const OrderListResponseSchema = z.object({ orders: z.array(ValidatedDraftSchema), nextCursor: IdSchema.nullable() }).strict();
 
 /** Bounded provider contract: extraction never receives a customer catalogue or history. */
 export interface ExtractionInput { text: string; documents: Document[]; evidence: DocumentEvidence[]; }
 export interface ExtractionProvider {
-  readonly mode: "mock" | "live";
+  readonly mode: "mock" | "live" | "manual";
   extract(input: ExtractionInput): Promise<{ extracted: ExtractedOrder; usage: ModelUsage | null }>;
 }
 export interface CatalogueRepository {

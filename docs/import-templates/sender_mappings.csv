@@ -1,0 +1,3 @@
+sender,customer_id,trusted
+buyer@example-engineering.co.uk,CUST100,false
+@example-engineering.co.uk,CUST100,false

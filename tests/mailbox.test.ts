@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { Checkpoint, fileState, httpIntake, imapMailbox, MailboxConfigSchema, MailboxPort, MAX_MESSAGE_BYTES, pollMailbox, retryDelaySeconds, safeErrorCode, StatePort, transportKey } from '../packages/mailbox';
+import { AUTOMATION_HEADERS, Checkpoint, fileState, httpIntake, imapMailbox, MailboxConfigSchema, MailboxPort, MAX_MESSAGE_BYTES, pollMailbox, retryDelaySeconds, safeErrorCode, StatePort, transportKey } from '../packages/mailbox';
 
 const imap=vi.hoisted(()=>({options:{} as Record<string,unknown>,connect:vi.fn(),mailboxOpen:vi.fn(),search:vi.fn(),fetchAll:vi.fn(),fetchOne:vi.fn(),logout:vi.fn(),close:vi.fn(),on:vi.fn()}));
 vi.mock('imapflow',()=>({ImapFlow:class {
@@ -10,7 +10,7 @@ vi.mock('imapflow',()=>({ImapFlow:class {
   connect=imap.connect;mailboxOpen=imap.mailboxOpen;search=imap.search;fetchAll=imap.fetchAll;fetchOne=imap.fetchOne;logout=imap.logout;close=imap.close;on=imap.on;
 }}));
 
-const config=MailboxConfigSchema.parse({host:'imap.example.test',user:'orders@example.test'});
+const config=MailboxConfigSchema.parse({host:'imap.example.test',user:'orders@example.test',subjectPrefix:'[PENNBRIDGE TEST]'});
 const identity={host:config.host,user:config.user,path:'INBOX'};
 function harness(lastUid:number|null=10) {
   let checkpoint:Checkpoint|null=lastUid===null?null:{identity,uidValidity:'42',lastUid};
@@ -110,10 +110,17 @@ describe('read-only mailbox receiver',()=>{
     expect(imap.mailboxOpen).toHaveBeenCalledWith('INBOX',{readOnly:true});
     await mailbox.list(10,20,30);
     expect(imap.search).toHaveBeenCalledWith({uid:'11:29'},{uid:true});
-    expect(imap.fetchAll).toHaveBeenCalledWith('11,12,14',{uid:true,size:true,envelope:true},{uid:true});
+    expect(imap.fetchAll).toHaveBeenCalledWith('11,12,14',{uid:true,size:true,envelope:true,headers:AUTOMATION_HEADERS},{uid:true});
     expect(await mailbox.raw(11)).toEqual(Buffer.from('raw MIME'));
     expect(imap.fetchOne).toHaveBeenCalledWith('11',{source:true},{uid:true});
     await mailbox.close();expect(imap.logout).toHaveBeenCalled();expect(imap.close).toHaveBeenCalled();
+  });
+  it('maps sender and automation headers from IMAP metadata and maps rejected credentials',async()=>{
+    imap.connect.mockResolvedValue(undefined);imap.mailboxOpen.mockResolvedValue({uidValidity:42n,uidNext:30});
+    imap.search.mockResolvedValue([11]);imap.fetchAll.mockResolvedValue([{uid:11,size:5,envelope:{subject:'s',from:[{address:'Buyer@Customer.Test'}]},headers:Buffer.from('Auto-Submitted: auto-replied\r\n\r\n')}]);
+    expect(await imapMailbox(config,'x').list(10,20,30)).toEqual([{uid:11,size:5,subject:'s',from:'buyer@customer.test',headers:{'auto-submitted':'auto-replied'}}]);
+    imap.connect.mockRejectedValue(Object.assign(new Error('AUTHENTICATIONFAILED secret'),{authenticationFailed:true}));
+    await expect(imapMailbox(config,'x').open()).rejects.toThrow('imap_auth_failed');
   });
 });
 const directories:string[]=[];

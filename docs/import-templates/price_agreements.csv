@@ -1,0 +1,3 @@
+customer_id,sku,unit_price,valid_from,minimum_quantity,valid_to,id
+CUST100,BOLT-M8-30,10.50,2026-01-01,1,2026-12-31,
+CUST100,BOLT-M8-30,9.75,2026-01-01,10,2026-12-31,

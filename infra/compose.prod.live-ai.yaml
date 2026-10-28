@@ -1,0 +1,13 @@
+# Added automatically by scripts/pbctl.sh when LIVE_AI_ENABLED=true. Only the worker gets internet access and the Gemini key.
+# The app container never calls the model and stays offline.
+services:
+  worker:
+    environment:
+      GEMINI_API_KEY_FILE: /run/secrets/gemini_key
+    secrets: [gemini_key]
+    networks: [private, ai-egress]
+networks:
+  ai-egress: {}
+secrets:
+  gemini_key:
+    file: ${PB_SECRETS_DIR:-../secrets}/gemini_key

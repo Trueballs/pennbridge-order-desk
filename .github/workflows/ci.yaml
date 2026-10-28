@@ -1,0 +1,63 @@
+name: ci
+on:
+  push: {branches: [main]}
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24, cache: npm}
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx vitest run
+      # Production dependencies only; dev tooling findings do not ship.
+      - run: npm audit --omit=dev --audit-level=high
+  database:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17
+        env: {POSTGRES_USER: pennbridge, POSTGRES_PASSWORD: ci-only-password, POSTGRES_DB: postgres}
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U pennbridge" --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      PGPASSWORD: ci-only-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24, cache: npm}
+      - run: npm ci
+      - name: Create isolated test databases
+        run: for d in ci_ops_test ci_core_test ci_pennbridge_stateful_test ci_accounts_test ci_workflow_test; do psql -h localhost -U pennbridge -d postgres -c "CREATE DATABASE $d"; done
+      - name: Operations tests (migrations, budgets, readiness)
+        run: npx vitest run tests/ops-db.test.ts
+        env: {OPS_DB_TEST: 'true', DATABASE_URL: 'postgresql://pennbridge:ci-only-password@localhost:5432/ci_ops_test'}
+      - name: Order lifecycle tests
+        run: npx vitest run tests/core-db.test.ts
+        env: {CORE_DB_TEST: 'true', DATABASE_URL: 'postgresql://pennbridge:ci-only-password@localhost:5432/ci_core_test', STORAGE_ROOT: /tmp/pb-storage, DEMO_MODE: 'true'}
+      - name: Stateful acceptance tests
+        run: npx vitest run tests/stateful-acceptance.test.ts
+        env: {STATEFUL_ACCEPTANCE_TEST: 'true', DATABASE_URL: 'postgresql://pennbridge:ci-only-password@localhost:5432/ci_pennbridge_stateful_test', STORAGE_ROOT: /tmp/pb-storage, DEMO_MODE: 'true'}
+      - name: Accounts, auth and import tests
+        run: npx vitest run tests/accounts-import.test.ts
+        env: {W3_DB_TEST: 'true', DATABASE_URL: 'postgresql://pennbridge:ci-only-password@localhost:5432/ci_accounts_test', STORAGE_ROOT: /tmp/pb-storage}
+      - name: Order workflow tests
+        run: npx vitest run tests/workflow-db.test.ts
+        env: {WORKFLOW_DB_TEST: 'true', DATABASE_URL: 'postgresql://pennbridge:ci-only-password@localhost:5432/ci_workflow_test', STORAGE_ROOT: /tmp/pb-storage, DEMO_MODE: 'true'}
+  images:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose files are valid
+        run: |
+          docker compose -f infra/compose.yaml config -q
+          printf 'POSTGRES_PASSWORD=ci\nPB_DOMAIN=ci.example.test\n' > /tmp/ci.env
+          docker compose --env-file /tmp/ci.env -f infra/compose.prod.yaml config -q
+          docker compose --env-file /tmp/ci.env -f infra/compose.prod.yaml -f infra/compose.prod.live-ai.yaml -f infra/compose.prod.mailbox.yaml config -q
+      - name: Production image builds
+        run: docker build -f infra/Dockerfile -t pennbridge-app:ci .

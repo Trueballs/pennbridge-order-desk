@@ -6,6 +6,70 @@ Decimal.set({ precision: 40, rounding: Decimal.ROUND_HALF_UP });
 export class ServiceError extends Error {
   constructor(public code: ReasonCode, message: string, public status = 422) { super(message); this.name = "ServiceError"; }
 }
+/** Europe/London calendar day (YYYY-MM-DD) of an instant: the pricing date for agreements. */
+export function londonDate(at: string | Date): string {
+  return new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/London",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(at));
+}
+const GENERIC: Partial<Record<ReasonCode,string>> = {
+  MODEL_UNAVAILABLE:"Automatic extraction is unavailable right now; enter the order manually or reprocess later.",
+  MODEL_TIMEOUT:"Automatic extraction timed out; reprocess the order or enter it manually.",
+  MODEL_OUTPUT_INVALID:"Automatic extraction returned an unusable result; reprocess the order or enter it manually.",
+  BUDGET_EXCEEDED:"The automatic extraction budget is used up; enter the order manually or ask an administrator.",
+  PARSING_FAILED:"The message could not be processed; reprocess the order or enter it manually.",
+  VALIDATION_FAILED:"The request could not be completed.", INTERNAL_ERROR:"The request could not be completed. Check the service logs.",
+  STALE_VERSION:"The processing lease expired; the job will be retried.", NOT_FOUND:"The requested item was not found.", FORBIDDEN:"This action is not permitted.",
+};
+// Codes whose messages we author ourselves (parser/validation limits): safe and useful to show.
+const AUTHORED = new Set<ReasonCode>(["UNSUPPORTED_FORMAT","FILE_TOO_LARGE","DOCUMENT_TOO_LONG","EMPTY_DOCUMENT","INVALID_STRUCTURED_INPUT","MISSING_ATTACHMENT"]);
+const PERMANENT = new Set<ReasonCode>([...AUTHORED,"BUDGET_EXCEEDED","NOT_FOUND","VALIDATION_FAILED","FORBIDDEN"]);
+const NETWORK = new Set(["ECONNRESET","ETIMEDOUT","ECONNREFUSED","ENOTFOUND","EAI_AGAIN","EPIPE","UND_ERR_CONNECT_TIMEOUT","UND_ERR_SOCKET"]);
+/** Retryable (transient: timeouts, 429/5xx, network, DB, lease) vs permanent (retrying cannot help). Message is safe to show users; raw detail is logged only. */
+export function classifyFailure(error: unknown, validCodes: readonly string[]): { code: ReasonCode; retryable: boolean; message: string } {
+  const e = (error ?? {}) as {code?: unknown; name?: string; status?: number; message?: string};
+  const code = (typeof e.code === "string" && validCodes.includes(e.code) ? e.code : null) as ReasonCode | null;
+  if (e.name === "TimeoutError" || e.name === "AbortError" || code === "MODEL_TIMEOUT") return {code:"MODEL_TIMEOUT",retryable:true,message:GENERIC.MODEL_TIMEOUT!};
+  if (code === "MODEL_UNAVAILABLE") {
+    const transient = typeof e.status === "number" && (e.status === 429 || e.status === 408 || e.status >= 500);
+    return {code,retryable:transient,message:GENERIC.MODEL_UNAVAILABLE!};
+  }
+  if (code) return {code,retryable:!PERMANENT.has(code),message:AUTHORED.has(code)&&e.message ? e.message.slice(0,300) : GENERIC[code] ?? GENERIC.PARSING_FAILED!};
+  if (e.name === "ZodError") return {code:"MODEL_OUTPUT_INVALID",retryable:true,message:GENERIC.MODEL_OUTPUT_INVALID!};
+  if (typeof e.code === "string" && NETWORK.has(e.code)) return {code:"MODEL_UNAVAILABLE",retryable:true,message:GENERIC.MODEL_UNAVAILABLE!};
+  return {code:"PARSING_FAILED",retryable:true,message:GENERIC.PARSING_FAILED!};
+}
+/** Maps any thrown value to an HTTP-safe error: internal details (SQL, stack, provider text) never reach the client. */
+export function publicError(error: unknown, validCodes: readonly string[]): { status: number; code: ReasonCode; message: string } {
+  const e = (error ?? {}) as {code?: unknown; name?: string; status?: number; message?: string};
+  if (error instanceof SyntaxError) return {status:400,code:"VALIDATION_FAILED",message:"The request body is not valid JSON."};
+  if (typeof e.code === "string" && /^[0-9A-Z]{5}$/.test(e.code) && !validCodes.includes(e.code)) {
+    if (e.code === "23505") return {status:409,code:"VALIDATION_FAILED",message:"That record already exists."};
+    if (e.code === "40001" || e.code === "40P01") return {status:409,code:"STALE_VERSION",message:"The data changed at the same time; try again."};
+    return {status:500,code:"INTERNAL_ERROR",message:GENERIC.INTERNAL_ERROR!};
+  }
+  const code = (typeof e.code === "string" && validCodes.includes(e.code) ? e.code : "INTERNAL_ERROR") as ReasonCode;
+  const status = typeof e.status === "number" && e.status >= 400 && e.status < 500 && code !== "INTERNAL_ERROR" ? e.status : 500;
+  return status < 500 && e.message ? {status,code,message:e.message} : {status:500,code:status<500?code:"INTERNAL_ERROR",message:GENERIC.INTERNAL_ERROR!};
+}
+const FREEMAIL = new Set(["gmail.com","googlemail.com","outlook.com","hotmail.com","hotmail.co.uk","live.com","yahoo.com","yahoo.co.uk","icloud.com","me.com","aol.com","proton.me","protonmail.com","btinternet.com","msn.com","gmx.com"]);
+export const isFreemailDomain = (domain: string) => FREEMAIL.has(domain.toLowerCase());
+/** Lower-cased address from a raw From value ("Name <a@b.com>" or "a@b.com"), or null. */
+export function senderParts(raw: string | null | undefined): { email: string; domain: string } | null {
+  const m = raw?.match(/<([^<>\s]+@[^<>\s]+)>\s*$/)?.[1] ?? raw?.trim();
+  if (!m || m.length > 320 || !/^[^\s@<>"]+@[a-z0-9]([a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}$/i.test(m)) return null;
+  const email = m.toLowerCase();
+  return {email,domain:email.slice(email.lastIndexOf("@")+1)};
+}
+/** Authentication-Results verdict: "fail" when any dkim/spf/dmarc check failed, "pass" when one passed with none failing, else "unknown". */
+export function authVerdict(header: string | null | undefined): "pass" | "fail" | "unknown" {
+  if (!header) return "unknown";
+  if (/\b(?:dkim|spf|dmarc)=(?:fail|softfail|permerror|temperror)\b/i.test(header)) return "fail";
+  return /\b(?:dkim|spf|dmarc)=pass\b/i.test(header) ? "pass" : "unknown";
+}
+/** One reason per (code,line); the first (provider, blocking) copy wins. */
+export function dedupeReasons(reasons: Reason[]): Reason[] {
+  const seen = new Set<string>();
+  return reasons.filter(r => { const k = `${r.code}|${r.lineId ?? ""}`; if (seen.has(k)) return false; seen.add(k); return true; });
+}
 export const money = (value: Decimal.Value) => new Decimal(value).toFixed(2);
 export const quantity = (value: Decimal.Value) => new Decimal(value).toFixed();
 export function canonicalJson(value: unknown): string {
@@ -33,7 +97,7 @@ export interface ValidationRepository {
   stock(productId: string): Promise<StockSnapshot | null>;
 }
 export interface ValidationContext {
-  customer: Customer | null; addresses: Address[]; catalogueVersion: string; at: string; repository: ValidationRepository;
+  customer: Customer | null; addresses: Address[]; catalogueVersion: string; at: string; pricingDate?: string; suggestedCustomerName?: string | null; repository: ValidationRepository;
   shippingAddressId?: string | null; selectedProducts?: Map<string,Product>; resolutions?: Array<{code:ReasonCode;lineId:string|null;resolution:string}>;
 }
 const comparable = (value: unknown) => String(value).toLowerCase().replace(/[^a-z0-9.]+/g," ").trim();
@@ -122,11 +186,13 @@ export async function validate(extracted: ExtractedOrder, context: ValidationCon
   // Provider/parser reasons are evidence, never reviewer authorization.
   const reasons:Reason[] = extracted.reasons.map(r=>({...r,severity:"blocking" as const,resolved:false,resolution:null}));
   const customer = context.customer;
-  if (!customer) reasons.push(reason("UNVERIFIED_SENDER","Select a verified customer before account-specific matching"));
+  const notOrder = ["quote_request","enquiry","non_order"].includes(extracted.intent), cancelling = extracted.intent === "cancellation";
+  if (!customer) reasons.push(reason("UNVERIFIED_SENDER",context.suggestedCustomerName ? `Sender maps to ${context.suggestedCustomerName} but that mapping is not trusted; confirm the customer before account-specific pricing` : "Select a verified customer before account-specific matching"));
   if (customer?.onHold) reasons.push(reason("ACCOUNT_ON_HOLD","Customer account is on credit hold"));
-  if (!extracted.poNumber) reasons.push(reason("MISSING_PO_REFERENCE","A purchase-order reference is required"));
+  if (!extracted.poNumber && !notOrder) reasons.push(reason("MISSING_PO_REFERENCE","A purchase-order reference is required"));
   if (extracted.currency && extracted.currency.toUpperCase() !== "GBP") reasons.push(reason("CURRENCY_MISMATCH",`Only GBP orders are supported; source says ${extracted.currency}`));
   let addressId = context.shippingAddressId ?? null;
+  if (!notOrder && !cancelling) {
   if (addressId && !context.addresses.some(a => a.id === addressId && a.customerId === customer?.id && a.approved)) { addressId = null; reasons.push(reason("NEW_SHIPPING_ADDRESS","Selected address is not approved for this customer")); }
   if (!addressId && extracted.requestedAddress && customer) {
     const raw = comparable(extracted.requestedAddress);
@@ -135,7 +201,8 @@ export async function validate(extracted: ExtractedOrder, context: ValidationCon
     else if (!addressMatches.length) reasons.push(reason("NEW_SHIPPING_ADDRESS","Source delivery address does not identify an approved address"));
   }
   if (!addressId) reasons.push(reason("SHIPPING_ADDRESS_AMBIGUOUS","Explicitly select an approved delivery address"));
-  if (!extracted.lines.length) reasons.push(reason("NO_ORDER_LINES","No order lines were extracted"));
+  }
+  if (!extracted.lines.length && !notOrder && !cancelling) reasons.push(reason("NO_ORDER_LINES","No order lines were extracted"));
   if(!extracted.lines.length && extracted.reasons.some(r=>r.code==="AMBIGUOUS_ORDER_HISTORY")) reasons.push(reason("MISSING_QUANTITY","A repeat request needs explicit quantities or a confirmed historical order"));
   if (extracted.intent === "quote_request") reasons.push(reason("QUOTE_REQUEST","Quotation request requires separate handling"));
   if (extracted.intent === "amendment") reasons.push(reason("ORDER_AMENDMENT","Amendment must be linked to its existing order"));
@@ -181,7 +248,7 @@ export async function validate(extracted: ExtractedOrder, context: ValidationCon
       if (source.unit && source.unit !== selected.sellingUnit) warnings.push(reason("AMBIGUOUS_PACK_SIZE",`Source unit ${source.unit} differs from selling unit ${selected.sellingUnit}; explicitly correct before approval`,source.id));
       else if (source.unit) normalizedQuantity = quantity(new Decimal(source.quantity).mul(selected.unitsPerPack));
       const agreements = customer ? await context.repository.prices(customer.id,selected.id) : [];
-      const day = context.at.slice(0,10);
+      const day = context.pricingDate ?? londonDate(context.at);
       const valid = agreements.filter(a => a.validFrom <= day && (!a.validTo || a.validTo >= day) && new Decimal(source.quantity!).gte(a.minimumQuantity)).sort((a,b)=>new Decimal(b.minimumQuantity).cmp(a.minimumQuantity));
       if (agreements.length && !valid.length && source.quotedUnitPrice!==null) warnings.push(reason("EXPIRED_PRICE_AGREEMENT","No agreement applies at this date and quantity (expired, not yet valid or below tier minimum); list price is shown for explicit review",source.id));
       unitPrice = valid[0]?.unitPrice ?? selected.listPrice; agreementVersion = valid[0]?.version ?? `list:${selected.catalogueVersion}`;
@@ -194,11 +261,11 @@ export async function validate(extracted: ExtractedOrder, context: ValidationCon
       }
     }
     lines.push({...source,productId:selected?.id ?? null,selectedSku:selected?.sku ?? null,matchMethod:selected ? method : null,candidates,
-      normalizedQuantity,normalizedUnit:selected?.physicalUnit ?? null,unitPrice,lineTotal,priceAgreementVersion:agreementVersion,reasons:applyResolutions(warnings,context.resolutions)});
+      normalizedQuantity,normalizedUnit:selected?.physicalUnit ?? null,unitPrice,lineTotal,priceAgreementVersion:agreementVersion,reasons:applyResolutions(dedupeReasons(warnings),context.resolutions)});
   }
   const total = money(lines.reduce((sum,line)=>sum.add(line.lineTotal ?? "0"),new Decimal(0)));
   if (extracted.quotedTotal && new Decimal(extracted.quotedTotal).sub(total).abs().gt("0.01")) reasons.push(reason("TOTAL_MISMATCH",`Source total £${extracted.quotedTotal}; calculated net total £${total}`));
-  const resolved = applyResolutions(reasons,context.resolutions);
+  const resolved = applyResolutions(dedupeReasons(reasons),context.resolutions);
   const status: ValidatedDraft["status"] = extracted.intent === "cancellation" ? "cancellation_review" : extracted.intent === "amendment" ? "amendment_review" : ["non_order","enquiry","quote_request"].includes(extracted.intent) ? "not_order" : hasUnresolved(resolved) || lines.some(l=>hasUnresolved(l.reasons)) || extracted.intent !== "new_order" ? "needs_review" : "draft_ready";
   return {lines,reasons:resolved,total,shippingAddressId:addressId,status};
 }

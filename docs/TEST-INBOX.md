@@ -14,7 +14,7 @@ python3 scripts/configure_mailbox.py
 bash scripts/start_mailbox.sh
 ```
 
-The setup prompts for the email address, IMAP host (Gmail: `imap.gmail.com`), folder (`INBOX`) and hidden app password. Secrets are stored only under ignored `runtime/mailbox/`. Its directory is owner-only (0700); individual files are readable inside their read-only Docker mounts. They are not put in images, command-line arguments or logs. Existing configuration is never silently overwritten.
+The setup prompts for the email address, IMAP host (Gmail: `imap.gmail.com`), folder (`INBOX`), an optional **subject prefix**, an optional first-run start date and the hidden app password. Secrets are stored only under ignored `runtime/mailbox/`. Its directory is owner-only (0700); individual files are readable inside their read-only Docker mounts. They are not put in images, command-line arguments or logs. Existing configuration is never silently overwritten.
 
 Wait for the receiver log event **`mailbox.ready`** before sending a new test:
 
@@ -28,7 +28,7 @@ The first successful connection deliberately starts after existing mail. It does
 
 To: the dedicated test address you configured
 
-Subject: `[PENNBRIDGE TEST] Purchase order DEMO-1001`
+Subject: `[PENNBRIDGE TEST] Purchase order DEMO-1001` (only needed if you set the prefix `[PENNBRIDGE TEST]` during setup; with the default blank prefix any subject is ingested)
 
 ```text
 Hi Pennbridge,
@@ -61,13 +61,25 @@ The key reaches only the worker, as a read-only Docker secret (`GEMINI_API_KEY_F
 
 ## Behavior and isolation
 
-- Reads new matching-subject emails over certificate-verified TLS, preserving full MIME and attachments; does not send, delete, move or mark emails read.
+- Reads new emails over certificate-verified TLS, preserving full MIME and attachments; does not send, delete, move or mark emails read.
+- **Subject prefix is optional** (`subjectPrefix` in `runtime/mailbox/config.json`). Blank, the default for new setups, ingests every message in the folder. Set a prefix (e.g. `[PENNBRIDGE TEST]`) on a shared or test inbox to ingest only matching subjects. An existing config keeps its prefix. The receiver logs `mailbox.config` at start showing which mode is active.
+- **Auto-replies and bulk mail are skipped before the body is fetched**: `Auto-Submitted` other than `no`, `Precedence: bulk/list/junk/auto_reply`, `List-Unsubscribe`/`List-Id`, `X-Auto-Response-Suppress`, `X-Autoreply`, a null `Return-Path`, delivery-status reports, mailer-daemon/postmaster senders, "Automatic reply/Out of office/Undeliverable" subjects and mail from the mailbox's own address. `noreply@` senders are not filtered (many ERP systems send purchase orders that way). Each skip is appended to `skipped.jsonl` in the state volume (uid, sender, subject, reason, time) and the checkpoint advances.
+- **Per-sender rate limit**: `senderRateLimitPerHour` (default 30, 0 = off). Excess messages from one sender are logged to `skipped.jsonl` as `sender_rate_limited` with a `mailbox.alert` log line; other senders are unaffected. The window is in memory and resets on restart.
+- **Poison messages**: a message whose failure is specific to it (desk answered 4xx other than 401/403/408/429, the body could not be fetched, size changed) is counted persistently in `failures.json`. After `maxAttemptsPerMessage` (default 5) it is quarantined (metadata plus failure code in `quarantine/`, no body) with a `poison_message_quarantined` alert and the queue moves on. Outages, 5xx, timeouts and credential errors never count, so a desk restart cannot quarantine good mail. A message that makes the desk return HTTP 500 every time is not counted and will still hold the queue; watch `mailbox_poll_failed` repeats.
+- **Credential alerts**: HTTP 401/403 from the desk (`intake_unauthorized`) or a rejected IMAP login (`imap_auth_failed`) writes `alert.json` in the state volume and logs a `mailbox.alert` error that says mail is not being ingested. The alert clears itself after the next successful poll. `status.json` records the last poll (time, ok, processed, consecutive failures, error code) for health checks.
+- **Checkpoint durability**: every checkpoint write is fsynced and atomic and the previous good copy is kept as `checkpoint.json.prev`, which is used if the main file is damaged. If both are unreadable the receiver stops with `invalid_checkpoint` instead of starting over. If the state volume is ever lost, the first connection creates a new baseline and logs `mailbox.baseline_created` ("Mail already in the mailbox was NOT imported"). Set `"ingestSince": "YYYY-MM-DD"` in `config.json` before restarting to baseline from a date instead; the desk ignores messages it already has (transport IDs include mailbox, UIDVALIDITY and UID). Back up the `mailbox-state` volume with the rest of the data.
 - Saves a durable checkpoint after accepted intake. Retries the same UID on failure; transport IDs include mailbox identity, UIDVALIDITY and UID. The app's deduplication prevents duplicate intake after a crash between acceptance and checkpointing.
 - Maximum 20 messages per poll and 10 MiB per email. Oversize messages create local metadata-only records under the receiver state volume's `quarantine/`; they do not appear as successfully imported orders.
 - On mailbox identity or UIDVALIDITY change, stops advancing and logs a reset-required error rather than silently starting over. Preserve the checkpoint and investigate before deliberately resetting it.
 - Only the receiver has an internet network. App and worker retain private networks. The receiver reaches the intake endpoint on a separate internal network and has no database credentials. Its token cannot approve orders, export, or assert a customer identity.
 - Receiver egress is a normal Docker bridge, not a destination allowlist. The app/worker offline-network claim does not apply to this opt-in receiver.
 - Your Mac must be awake and Docker running. Once started, the receiver restarts with Docker; it does not require a public webhook, domain or paid hosting.
+
+Inspect receiver state (read-only):
+
+```sh
+docker compose -f infra/compose.yaml -f infra/mailbox.compose.yaml exec mailbox sh -c 'ls /app/runtime/mailbox-state /app/runtime/mailbox-state/quarantine; tail -5 /app/runtime/mailbox-state/skipped.jsonl; cat /app/runtime/mailbox-state/status.json /app/runtime/mailbox-state/alert.json'
+```
 
 Stop receiving without deleting state:
 
@@ -77,6 +89,6 @@ docker compose -f infra/compose.yaml -f infra/mailbox.compose.yaml stop mailbox
 
 ## Verified so far
 
-15 receiver tests cover first-connect baseline, sequential retry, crash replay, subject filtering, oversized messages, identity/UIDVALIDITY changes, TLS/read-only fetching and HTTP acceptance. Two additional token tests cover separate mailbox authority and rejection of asserted customer identity or alternate channels. Type checking and the existing offline suite pass. These are simulated transport/adapter tests, not proof of a real Gmail connection. Complete that proof only after authentication and an actual received test email.
+The receiver tests (`tests/mailbox.test.ts`, `tests/mailbox-auth.test.ts`, `tests/mailbox-hardening.test.ts`) cover first-connect baseline (including `ingestSince`), sequential retry, crash replay, optional subject filtering, oversized messages, identity/UIDVALIDITY changes, TLS/read-only fetching, header-based auto-reply/bulk detection, sender rate limiting, poison quarantine, 401/403 alerting, checkpoint recovery from a torn write and HTTP acceptance. Two additional token tests cover separate mailbox authority and rejection of asserted customer identity or alternate channels. These are simulated transport/adapter tests, not proof of a real Gmail connection. The 2026-10-28 live run above predates the pre-filter, rate limit and poison handling; re-verify with a real message after upgrading.
 
 Sources checked 28 October 2026: [Google app passwords](https://support.google.com/mail/answer/185833?hl=en), [ImapFlow client API](https://imapflow.com/docs/api/imapflow-client/).

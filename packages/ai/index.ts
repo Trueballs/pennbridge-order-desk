@@ -165,8 +165,25 @@ export class GeminiProvider implements ExtractionProvider {
     }catch(e){if(!settled)await settle(reservation,null);throw e;}
   }
 }
+/** Production fallback: no automatic extraction. The order arrives with no lines and a clear reason; a reviewer enters it manually. */
+export class ManualEntryProvider implements ExtractionProvider {
+  readonly mode='manual' as const;
+  async extract(_input:ExtractionInput):Promise<{extracted:ExtractedOrder;usage:null}>{
+    return {usage:null,extracted:ExtractedOrderSchema.parse({schemaVersion:1,intent:'unclear',poNumber:null,relatedPoNumber:null,revision:null,requestedDeliveryDate:null,requestedAddress:null,currency:null,quotedTotal:null,lines:[],evidence:[],
+      reasons:[reason('MODEL_UNAVAILABLE','Automatic extraction is not configured. Read the source documents and enter the customer, PO and order lines manually.')]})};
+  }
+}
+/** True when a live provider is enabled and has its credentials. */
+export function liveConfigured():boolean{
+  if(process.env.LIVE_AI_ENABLED!=='true')return false;
+  return process.env.AI_PROVIDER==='gemini'?!!(process.env.GEMINI_API_KEY||process.env.GEMINI_API_KEY_FILE):!!process.env.ANTHROPIC_API_KEY;
+}
+/** Live if configured; MockProvider only in DEMO_MODE; otherwise manual entry. */
+export function extractionMode():'live'|'mock'|'manual'{return liveConfigured()?'live':process.env.DEMO_MODE==='true'?'mock':'manual';}
 export function createProvider(opts?:{runId?:string;orderId?:string}):ExtractionProvider {
-  if(process.env.LIVE_AI_ENABLED!=='true')return new MockProvider();
+  const mode=extractionMode();
+  if(mode==='mock')return new MockProvider();
+  if(mode==='manual')return new ManualEntryProvider();
   const o={runId:opts?.runId||'manual-run',orderId:opts?.orderId||'unassigned'};
   return process.env.AI_PROVIDER==='gemini'?new GeminiProvider(o):new LiveProvider(o);
 }

@@ -4,11 +4,14 @@ import path from "node:path";
 import { readFileSync } from "node:fs";
 import { compare } from "bcryptjs";
 import type { PoolClient } from "pg";
-import { AddressSchema, ExtractedOrderSchema, IntakeRequestSchema, ReasonCodeSchema, type Address, type AmendmentRequest, type ApproveRequest, type CancelRequest, type Customer, type Document, type DocumentEvidence, type EditOrderRequest, type ExportRequest, type ExportSnapshot, type ExtractedOrder, type ExtractionProvider, type IntakeRequest, type IntakeResponse, type Job, type HistoricalSuggestion, type OrderDetail, type OrderListQuery, type OrderListResponse, type Product, type Session, type SourceMessage, type Unit, type ValidatedDraft, type VerifyExportRequest } from "@pennbridge/contracts";
+import { authenticate, revokeToken, sessionFromToken } from "./auth"; // W3
+import { AddLineRequestSchema, AddressSchema, AssignCustomerRequestSchema, ExtractedOrderSchema, IntakeRequestSchema, OrderListQuerySchema, ReasonCodeSchema, RemoveLineRequestSchema, ReprocessRequestSchema, SenderMappingInputSchema, VerifyExportRequestSchema, VoidExportRequestSchema, type AddLineRequest, type Address, type AmendmentRequest, type AssignCustomerRequest, type DraftLine, type ExtractedLine, type ReasonCode, type RemoveLineRequest, type RemovedLine, type ReprocessRequest, type SenderMapping, type SenderMappingInput, type SuggestedCustomer, type VoidExportRequest, type ApproveRequest, type CancelRequest, type Customer, type Document, type DocumentEvidence, type EditOrderRequest, type ExportRequest, type ExportSnapshot, type ExtractedOrder, type ExtractionProvider, type IntakeRequest, type IntakeResponse, type Job, type HistoricalSuggestion, type OrderDetail, type OrderListQuery, type OrderListResponse, type Product, type Session, type SourceMessage, type Unit, type ValidatedDraft, type VerifyExportRequest } from "@pennbridge/contracts";
 import { audit, failJob, id, jobFromRow, migrate, pool, sha256, transaction, type DbClient } from "@pennbridge/db";
-import { CATALOGUE_VERSION, seedDatabase } from "@pennbridge/db/seed";
-import { canApprove, canonicalJson, contentHash, anchorEvidence, hasUnresolved, lineCoverage, quantity, reason, ServiceError, validate, type ValidationRepository } from "@pennbridge/domain";
+import { CATALOGUE_VERSION, currentCatalogueVersion, seedDatabase } from "@pennbridge/db/seed";
+import { authVerdict, canApprove, canonicalJson, classifyFailure, contentHash, anchorEvidence, hasUnresolved, isFreemailDomain, lineCoverage, londonDate, publicError as toPublicError, quantity, reason, senderParts, ServiceError, validate, type ValidationRepository } from "@pennbridge/domain";
 export { ServiceError } from "@pennbridge/domain";
+/** HTTP-safe error for any thrown value: SQL/stack/provider text never reaches clients. */
+export const publicError=(error:unknown)=>toPublicError(error,ReasonCodeSchema.options);
 
 const storageRoot = path.resolve(process.env.STORAGE_ROOT ?? "runtime/storage");
 let initialising: Promise<void> | null = null;
@@ -18,21 +21,17 @@ export function initialiseDatabase(): Promise<void> {
 }
 function allow(session: Session | null, roles: Session["role"][] = ["viewer","reviewer","admin"]) { if (!session) throw new ServiceError("FORBIDDEN","Login required",401); if (!roles.includes(session.role)) throw new ServiceError("FORBIDDEN","This action is not permitted for your role",403); return session; }
 function mutate(session: Session | null) { return allow(session,["reviewer","admin"]); }
-export async function login(email: string, password: string): Promise<{session:Session;token:string}> {
+// W3 (auth.ts): login/session/logout bodies delegate to ./auth (throttling, dummy compare, expiry, revocation). Keep signatures.
+export async function login(email: string, password: string, context: {ip?: string} = {}): Promise<{session:Session;token:string}> {
   await initialiseDatabase();
-  const user = (await pool.query("SELECT * FROM users WHERE email=$1", [email.toLowerCase()])).rows[0];
-  if (!user || !await compare(password,user.password_hash)) throw new ServiceError("FORBIDDEN","Invalid email or password",401);
-  const token=randomBytes(32).toString("hex"); const expiresAt=new Date(Date.now()+8*3600000).toISOString();
-  await pool.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,$3)",[sha256(token),user.id,expiresAt]);
-  return {token,session:{userId:user.id,email:user.email,name:user.name,role:user.role,expiresAt}};
+  return authenticate(email,password,context);
 }
 export async function session(token: string | null | undefined): Promise<Session | null> {
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
   await initialiseDatabase();
-  const row=(await pool.query("SELECT u.*,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()",[sha256(token)])).rows[0];
-  return row ? {userId:row.id,email:row.email,name:row.name,role:row.role,expiresAt:new Date(row.expires_at).toISOString()} : null;
+  return sessionFromToken(token);
 }
-export async function logout(token: string | null | undefined): Promise<void> { if (token) await pool.query("DELETE FROM sessions WHERE token_hash=$1",[sha256(token)]); }
+export async function logout(token: string | null | undefined): Promise<void> { await revokeToken(token); }
 export function ingestionSession(token: string | null): Session | null {
   const mailboxTokenFile=process.env.MAILBOX_INGESTION_TOKEN_FILE;
   if(mailboxTokenFile && token){
@@ -43,11 +42,27 @@ export function ingestionSession(token: string | null): Session | null {
   if (!expected || !token || sha256(token)!==sha256(expected)) return null;
   return {userId:"synthetic-ingestion",email:"ingestion@pennbridge.example",name:"Synthetic ingestion",role:"ingestion",expiresAt:new Date(Date.now()+3600000).toISOString()};
 }
-export async function listOrders(actor: Session, query: Partial<OrderListQuery> = {}): Promise<OrderListResponse> {
+const encodeCursor=(createdAt:Date,id:string)=>Buffer.from(`${createdAt.toISOString()}|${id}`).toString("base64url");
+function decodeCursor(cursor:string):{at:string;id:string} {
+  const [at,...rest]=Buffer.from(cursor,"base64url").toString("utf8").split("|"),id=rest.join("|");
+  if (!at || !id || Number.isNaN(Date.parse(at))) throw new ServiceError("VALIDATION_FAILED","Invalid page cursor",400);
+  return {at,id};
+}
+const likeTerm=(term:string)=>`%${term.replace(/[\\%_]/g,m=>`\\${m}`)}%`;
+/** Newest first by (created_at,id) with a keyset cursor; optional status/customer/date/text filters. Dates are Europe/London days. */
+export async function listOrders(actor: Session, query: Record<string,unknown> = {}): Promise<OrderListResponse> {
   allow(actor); await initialiseDatabase();
-  const limit=Math.min(100,Math.max(1,query.limit ?? 50));
-  const rows=await pool.query("SELECT data FROM orders WHERE ($1::text IS NULL OR status=$1) AND ($2::text IS NULL OR id<$2) ORDER BY id DESC LIMIT $3",[query.status??null,query.cursor??null,limit+1]);
-  return {orders:rows.rows.slice(0,limit).map(r=>r.data),nextCursor:rows.rows.length>limit ? rows.rows[limit-1].data.id : null};
+  const q=OrderListQuerySchema.parse(Object.fromEntries(Object.entries(query).filter(([,v])=>v!==undefined&&v!==null&&v!=="")));
+  const terms=(q.q?.toLowerCase().split(/\s+/).filter(Boolean).slice(0,8)??[]).map(likeTerm);
+  const cursor=q.cursor?decodeCursor(q.cursor):null;
+  const rows=(await pool.query(`SELECT data,created_at,id FROM orders WHERE ($1::text IS NULL OR status=$1) AND ($2::text IS NULL OR customer_id=$2)
+    AND ($3::text[] IS NULL OR search_text LIKE ALL($3))
+    AND ($4::date IS NULL OR created_at>=($4::date)::timestamp AT TIME ZONE 'Europe/London')
+    AND ($5::date IS NULL OR created_at<(($5::date)+1)::timestamp AT TIME ZONE 'Europe/London')
+    AND ($6::timestamptz IS NULL OR (created_at,id)<($6::timestamptz,$7::text))
+    ORDER BY created_at DESC,id DESC LIMIT $8`,[q.status??null,q.customerId??null,terms.length?terms:null,q.dateFrom??null,q.dateTo??null,cursor?.at??null,cursor?.id??null,q.limit+1])).rows;
+  const page=rows.slice(0,q.limit),last=page[page.length-1];
+  return {orders:page.map(r=>r.data),nextCursor:rows.length>q.limit?encodeCursor(last.created_at,last.id):null};
 }
 async function detail(client: DbClient, orderId: string): Promise<OrderDetail> {
   const row=(await client.query("SELECT data FROM orders WHERE id=$1",[orderId])).rows[0];
@@ -78,9 +93,10 @@ async function lockedOrder(client: DbClient, orderId: string, expectedVersion: n
   return row.data;
 }
 async function saveOrder(client: DbClient, order: ValidatedDraft, snapshot=true): Promise<void> {
-  await client.query(`INSERT INTO orders(id,message_id,customer_id,po_number,status,version,content_hash,data,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-    ON CONFLICT(id) DO UPDATE SET customer_id=excluded.customer_id,po_number=excluded.po_number,status=excluded.status,version=excluded.version,content_hash=excluded.content_hash,data=excluded.data,updated_at=excluded.updated_at`,
-    [order.id,order.sourceMessageId,order.customerId,order.poNumber,order.status,order.version,order.contentHash,order,order.createdAt,order.updatedAt]);
+  const search=[order.id,order.poNumber,order.customerId,order.customerName,order.senderEmail,order.subject,...order.lines.flatMap(l=>[l.selectedSku,l.sku,l.manufacturerReference,l.customerAlias,l.description])].filter(Boolean).join(" ").toLowerCase().slice(0,20000);
+  await client.query(`INSERT INTO orders(id,message_id,customer_id,po_number,status,version,content_hash,data,created_at,updated_at,sender,subject,search_text) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+    ON CONFLICT(id) DO UPDATE SET customer_id=excluded.customer_id,po_number=excluded.po_number,status=excluded.status,version=excluded.version,content_hash=excluded.content_hash,data=excluded.data,updated_at=excluded.updated_at,sender=excluded.sender,subject=excluded.subject,search_text=excluded.search_text`,
+    [order.id,order.sourceMessageId,order.customerId,order.poNumber,order.status,order.version,order.contentHash,order,order.createdAt,order.updatedAt,order.senderEmail?.toLowerCase()??null,order.subject??null,search]);
   if(snapshot) await client.query("INSERT INTO order_versions(order_id,version,content_hash,data) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING",[order.id,order.version,order.contentHash,order]);
 }
 async function duplicatePrior(client:DbClient,order:ValidatedDraft):Promise<ValidatedDraft|null> {
@@ -123,18 +139,58 @@ function repository(client: DbClient): ValidationRepository {
     stock:async productId=>(await client.query("SELECT data FROM stock_snapshots WHERE product_id=$1",[productId])).rows[0]?.data??null,
   };
 }
-async function validationContext(client:DbClient, customerId:string|null, at:string) {
+async function validationContext(client:DbClient, customerId:string|null, at:string, pricingDate?:string, suggestedCustomerName?:string|null) {
   const customer: Customer|null=customerId ? (await client.query("SELECT data FROM customers WHERE id=$1",[customerId])).rows[0]?.data??null : null;
   const addresses:Address[]=customer ? (await client.query("SELECT data FROM addresses WHERE customer_id=$1",[customer.id])).rows.map(r=>r.data) : [];
-  return {customer,addresses,catalogueVersion:CATALOGUE_VERSION,at,repository:repository(client)};
+  return {customer,addresses,catalogueVersion:await currentCatalogueVersion(client),at,pricingDate:pricingDate??londonDate(at),suggestedCustomerName,repository:repository(client)};
+}
+const KEEP_REASONS=["UNTRUSTED_INSTRUCTION","CONFLICTING_DOCUMENT_VERSIONS","MIXED_ORDER_AND_RETURN","AMBIGUOUS_DELIVERY_DATE","CURRENCY_MISMATCH","TOTAL_MISMATCH","MISSING_ATTACHMENT"];
+// Extraction-failure reasons stop mattering once a reviewer has entered lines by hand.
+const EXTRACTION_FAILURE=new Set<ReasonCode>(["MODEL_UNAVAILABLE","MODEL_TIMEOUT","MODEL_OUTPUT_INVALID","PARSING_FAILED","BUDGET_EXCEEDED","NO_ORDER_LINES"]);
+function assertEditable(order:ValidatedDraft){
+  if (["exported","cancelled","duplicate","parsing","received"].includes(order.status)) throw new ServiceError("VALIDATION_FAILED","This order cannot be edited; create an amendment for an exported order");
+}
+const isManualEntry=(order:ValidatedDraft)=>order.status==="failed"||["unknown","unclear"].includes(order.intent);
+const toExtractedLine=({id,position,rawText,sku,manufacturerReference,customerAlias,description,quantity,unit,originalUnit,quotedUnitPrice,attributes,evidenceIds}:ExtractedLine):ExtractedLine=>({id,position,rawText,sku,manufacturerReference,customerAlias,description,quantity,unit,originalUnit,quotedUnitPrice,attributes,evidenceIds});
+async function selectedProductsFor(client:DbClient,lines:DraftLine[],picked:Set<string>):Promise<Map<string,Product>> {
+  const selected=new Map<string,Product>();
+  for (const line of lines) if (line.productId && (picked.has(line.id) || line.matchMethod==="manual")) {
+    const product=(await client.query("SELECT data FROM products WHERE id=$1",[line.productId])).rows[0]?.data;
+    if (!product) throw new ServiceError("VALIDATION_FAILED","Selected product does not exist");
+    selected.set(line.id,product);
+  }
+  return selected;
+}
+interface Rebuild { lines:ExtractedLine[];customerId:string|null;poNumber:string|null;requestedDeliveryDate:string|null;shippingAddressId:string|null;selectedProducts:Map<string,Product>;
+  resolutions?:Array<{code:ReasonCode;lineId:string|null;resolution:string}>;carryLineIds?:Set<string>;removedLines?:RemovedLine[]; }
+/** Single revalidation path for every manual change: edit, add line, remove line, customer assignment. Bumps the version and withdraws approval. */
+async function rebuild(client:DbClient,order:ValidatedDraft,spec:Rebuild):Promise<ValidatedDraft> {
+  const manual=isManualEntry(order),removedLines=spec.removedLines??order.removedLines??[];
+  const originalExtracted:ExtractedOrder|null=(await client.query("SELECT extracted FROM messages WHERE id=$1",[order.sourceMessageId])).rows[0]?.extracted??null;
+  const sourceText=(await client.query("SELECT data->>'text' AS text FROM documents WHERE message_id=$1",[order.sourceMessageId])).rows.map(r=>r.text).filter(Boolean).join("\n");
+  const reasons=(originalExtracted?.reasons??order.reasons.filter(r=>KEEP_REASONS.includes(r.code))).filter(r=>r.code!=="INCOMPLETE_EXTRACTION"&&!(r.code==="NEW_SHIPPING_ADDRESS"&&spec.shippingAddressId)&&!(manual&&spec.lines.length&&EXTRACTION_FAILURE.has(r.code)));
+  // Rows the reviewer deliberately removed still exist in the source text, so they must not re-trigger the completeness check.
+  const coverage=lineCoverage(sourceText,spec.lines.length+removedLines.filter(r=>!r.id.startsWith("manual-")).length);if(coverage)reasons.push(coverage);
+  const intent=manual&&spec.lines.length&&["unknown","unclear"].includes(order.intent)?"new_order":order.intent;
+  const extracted:ExtractedOrder={schemaVersion:1,intent,poNumber:spec.poNumber,relatedPoNumber:null,revision:order.revision,requestedDeliveryDate:spec.requestedDeliveryDate,requestedAddress:originalExtracted?.requestedAddress??null,
+    currency:originalExtracted?.currency??order.currency,quotedTotal:originalExtracted?.quotedTotal??null,lines:spec.lines,evidence:[],reasons};
+  const context=await validationContext(client,spec.customerId,new Date().toISOString(),order.pricingDate??londonDate(order.createdAt),order.suggestedCustomer?.customerName);
+  const carried=spec.carryLineIds?[...order.reasons.filter(r=>r.resolved&&r.code!=="TOTAL_MISMATCH"),...order.lines.filter(l=>spec.carryLineIds!.has(l.id)).flatMap(l=>l.reasons.filter(r=>r.resolved))].map(r=>({code:r.code,lineId:r.lineId,resolution:r.resolution!})):[];
+  const validation=await validate(extracted,{...context,shippingAddressId:spec.shippingAddressId,selectedProducts:spec.selectedProducts,resolutions:[...carried,...(spec.resolutions??[])]});
+  const updated:ValidatedDraft={...order,...validation,catalogueVersion:context.catalogueVersion,intent,customerId:context.customer?.id??null,customerName:context.customer?.name??null,poNumber:spec.poNumber,requestedDeliveryDate:spec.requestedDeliveryDate,approval:null,version:order.version+1,updatedAt:new Date().toISOString(),
+    suggestedCustomer:context.customer?null:order.suggestedCustomer??null,removedLines,processingMode:manual&&spec.lines.length?"manual":order.processingMode};
+  await applyBusinessDuplicate(client,updated);
+  updated.contentHash=contentHash(updated);
+  if (order.approval) await client.query("UPDATE approvals SET data=jsonb_set(data,'{invalidatedAt}',to_jsonb($2::text)) WHERE id=$1",[order.approval.id,updated.updatedAt]);
+  await saveOrder(client,updated);
+  return updated;
 }
 export async function editOrder(actor:Session,orderId:string,input:EditOrderRequest):Promise<OrderDetail> {
   mutate(actor); await initialiseDatabase();
   return transaction(async client=>{
     const order=await lockedOrder(client,orderId,input.expectedVersion);
-    if (["exported","cancelled","duplicate","parsing","received"].includes(order.status)) throw new ServiceError("VALIDATION_FAILED","This order cannot be edited; create an amendment for an exported order");
+    assertEditable(order);
     const patch=input.patch;
-    const selectedProducts=new Map<string,Product>();
     const oldIds=new Set(order.lines.map(l=>l.id));
     if (patch.lines && (patch.lines.length!==order.lines.length || patch.lines.some(l=>!oldIds.has(l.id)))) throw new ServiceError("VALIDATION_FAILED","Every source line must remain represented; lines cannot be silently omitted");
     const lines=order.lines.map(old=>{
@@ -142,23 +198,76 @@ export async function editOrder(actor:Session,orderId:string,input:EditOrderRequ
       if (!edited) return old;
       return {...old,quantity:edited.quantity,unit:edited.unit,quotedUnitPrice:edited.quotedUnitPrice,description:edited.description,productId:edited.productId};
     });
-    for (const line of lines) if (line.productId && (patch.lines?.some(edited=>edited.id===line.id && edited.productId) || line.matchMethod==="manual")) {
-      const product=(await client.query("SELECT data FROM products WHERE id=$1",[line.productId])).rows[0]?.data;
-      if (!product) throw new ServiceError("VALIDATION_FAILED","Selected product does not exist");
-      selectedProducts.set(line.id,product);
-    }
-    const originalExtracted:ExtractedOrder|null=(await client.query("SELECT extracted FROM messages WHERE id=$1",[order.sourceMessageId])).rows[0]?.extracted??null;
-    const extracted:ExtractedOrder={schemaVersion:1,intent:order.intent,poNumber:patch.poNumber===undefined?order.poNumber:patch.poNumber,relatedPoNumber:null,revision:order.revision,
-      requestedDeliveryDate:patch.requestedDeliveryDate===undefined?order.requestedDeliveryDate:patch.requestedDeliveryDate,requestedAddress:null,currency:originalExtracted?.currency??order.currency,quotedTotal:originalExtracted?.quotedTotal??null,
-      lines:lines.map(({id,position,rawText,sku,manufacturerReference,customerAlias,description,quantity,unit,originalUnit,quotedUnitPrice,attributes,evidenceIds})=>({id,position,rawText,sku,manufacturerReference,customerAlias,description,quantity,unit,originalUnit,quotedUnitPrice,attributes,evidenceIds})),
-      evidence:[],reasons:(originalExtracted?.reasons??order.reasons.filter(r=>["UNTRUSTED_INSTRUCTION","CONFLICTING_DOCUMENT_VERSIONS","MIXED_ORDER_AND_RETURN","AMBIGUOUS_DELIVERY_DATE","CURRENCY_MISMATCH","TOTAL_MISMATCH","MISSING_ATTACHMENT"].includes(r.code))).filter(r=>!(r.code==="NEW_SHIPPING_ADDRESS" && patch.shippingAddressId))};
-    const context=await validationContext(client,patch.customerId===undefined?order.customerId:patch.customerId,new Date().toISOString());
-    const validation=await validate(extracted,{...context,shippingAddressId:patch.shippingAddressId===undefined?order.shippingAddressId:patch.shippingAddressId,selectedProducts,resolutions:patch.reasonResolutions});
-    const updated:ValidatedDraft={...order,...validation,customerId:context.customer?.id??null,customerName:context.customer?.name??null,poNumber:extracted.poNumber,requestedDeliveryDate:extracted.requestedDeliveryDate,approval:null,version:order.version+1,updatedAt:new Date().toISOString()};
-    await applyBusinessDuplicate(client,updated);
-    updated.contentHash=contentHash(updated);
-    if (order.approval) await client.query("UPDATE approvals SET data=jsonb_set(data,'{invalidatedAt}',to_jsonb($2::text)) WHERE id=$1",[order.approval.id,updated.updatedAt]);
-    await saveOrder(client,updated); await audit(client,orderId,actor,"order.edited",updated.version,{approvalInvalidated:!!order.approval});
+    const selectedProducts=await selectedProductsFor(client,lines,new Set((patch.lines??[]).filter(l=>l.productId).map(l=>l.id)));
+    const customerId=patch.customerId===undefined?order.customerId:patch.customerId;
+    if (customerId && !(await client.query("SELECT 1 FROM customers WHERE id=$1",[customerId])).rowCount) throw new ServiceError("VALIDATION_FAILED","Unknown customer",400);
+    const customerChanged=customerId!==order.customerId;
+    const updated=await rebuild(client,order,{lines:lines.map(toExtractedLine),customerId,poNumber:patch.poNumber===undefined?order.poNumber:patch.poNumber,
+      requestedDeliveryDate:patch.requestedDeliveryDate===undefined?order.requestedDeliveryDate:patch.requestedDeliveryDate,
+      // An address approved for the previous customer cannot carry over to a different customer.
+      shippingAddressId:patch.shippingAddressId!==undefined?patch.shippingAddressId:customerChanged?null:order.shippingAddressId,selectedProducts,resolutions:patch.reasonResolutions});
+    await audit(client,orderId,actor,"order.edited",updated.version,{approvalInvalidated:!!order.approval});
+    if (customerChanged) await audit(client,orderId,actor,"order.customer_assigned",updated.version,{customerId,previousCustomerId:order.customerId,viaSuggestion:!!customerId&&order.suggestedCustomer?.customerId===customerId,repriced:true});
+    return detail(client,orderId);
+  });
+}
+/** Confirm (or change) the customer; revalidates so agreement prices and approved addresses apply. */
+export function assignCustomer(actor:Session,orderId:string,input:AssignCustomerRequest):Promise<OrderDetail> {
+  const parsed=AssignCustomerRequestSchema.parse(input);
+  return editOrder(actor,orderId,{expectedVersion:parsed.expectedVersion,patch:{customerId:parsed.customerId}});
+}
+export async function addLine(actor:Session,orderId:string,input:AddLineRequest):Promise<OrderDetail> {
+  mutate(actor); input=AddLineRequestSchema.parse(input); await initialiseDatabase();
+  return transaction(async client=>{
+    const order=await lockedOrder(client,orderId,input.expectedVersion);
+    assertEditable(order);
+    if (order.lines.length>=100) throw new ServiceError("VALIDATION_FAILED","An order can have at most 100 lines");
+    const spec=input.line;
+    const product:Product|null=spec.productId?(await client.query("SELECT data FROM products WHERE id=$1",[spec.productId])).rows[0]?.data??null:null;
+    if (spec.productId && !product) throw new ServiceError("VALIDATION_FAILED","Selected product does not exist",400);
+    const lineId=`manual-${randomBytes(4).toString("hex")}`;
+    const added:ExtractedLine={id:lineId,position:order.lines.length+1,rawText:`[manual entry by ${actor.email}] ${spec.quantity} ${spec.unit} ${spec.sku??product?.sku??spec.description}`.slice(0,8000),sku:product?null:spec.sku?.toUpperCase()||null,manufacturerReference:null,customerAlias:null,
+      description:spec.description,quantity:spec.quantity,unit:spec.unit,originalUnit:spec.unit,quotedUnitPrice:spec.quotedUnitPrice??null,attributes:{},evidenceIds:[]};
+    const selectedProducts=await selectedProductsFor(client,order.lines,new Set());if (product) selectedProducts.set(lineId,product);
+    const updated=await rebuild(client,order,{lines:[...order.lines.map(toExtractedLine),added],customerId:order.customerId,poNumber:order.poNumber,requestedDeliveryDate:order.requestedDeliveryDate,
+      shippingAddressId:order.shippingAddressId,selectedProducts,carryLineIds:new Set(order.lines.map(l=>l.id))});
+    await audit(client,orderId,actor,"line.added",updated.version,{lineId,sku:product?.sku??added.sku,quantity:spec.quantity,unit:spec.unit,reason:input.reason,approvalInvalidated:!!order.approval,manualEntry:isManualEntry(order)});
+    return detail(client,orderId);
+  });
+}
+export async function removeLine(actor:Session,orderId:string,lineId:string,input:RemoveLineRequest):Promise<OrderDetail> {
+  mutate(actor); input=RemoveLineRequestSchema.parse(input); await initialiseDatabase();
+  return transaction(async client=>{
+    const order=await lockedOrder(client,orderId,input.expectedVersion);
+    assertEditable(order);
+    const gone=order.lines.find(l=>l.id===lineId);
+    if (!gone) throw new ServiceError("NOT_FOUND","Line not found on this order",404);
+    const remaining=order.lines.filter(l=>l.id!==lineId);
+    const at=new Date().toISOString();
+    const removedLines:RemovedLine[]=[...(order.removedLines??[]),{id:gone.id,position:gone.position,sku:gone.selectedSku??gone.sku,description:gone.description.slice(0,500),quantity:gone.quantity,unit:gone.unit,reason:input.reason,removedBy:actor.userId,removedAt:at}];
+    const selectedProducts=await selectedProductsFor(client,remaining,new Set());
+    const updated=await rebuild(client,order,{lines:remaining.map((l,i)=>({...toExtractedLine(l),position:i+1})),customerId:order.customerId,poNumber:order.poNumber,requestedDeliveryDate:order.requestedDeliveryDate,
+      shippingAddressId:order.shippingAddressId,selectedProducts,carryLineIds:new Set(remaining.map(l=>l.id)),removedLines});
+    await audit(client,orderId,actor,"line.removed",updated.version,{lineId,sku:gone.selectedSku??gone.sku,quantity:gone.quantity,unit:gone.unit,reason:input.reason,approvalInvalidated:!!order.approval});
+    return detail(client,orderId);
+  });
+}
+const REPROCESSABLE=["failed","needs_review","draft_ready","not_order","amendment_review","cancellation_review"];
+const REPROCESS_LIMIT=Number(process.env.REPROCESS_LIMIT_PER_ORDER??3);
+/** Re-run extraction on the original message. Manual edits are replaced (version history keeps them); each run reserves model budget like the first. Reviewers get a few runs per order, administrators more. */
+export async function reprocessOrder(actor:Session,orderId:string,input:ReprocessRequest):Promise<OrderDetail> {
+  mutate(actor); input=ReprocessRequestSchema.parse(input); await initialiseDatabase();
+  return transaction(async client=>{
+    const order=await lockedOrder(client,orderId,input.expectedVersion);
+    if (!REPROCESSABLE.includes(order.status)) throw new ServiceError("VALIDATION_FAILED","This order cannot be reprocessed in its current state; withdraw approval or wait for the running job",409);
+    if ((await client.query("SELECT 1 FROM jobs WHERE message_id=$1 AND status IN ('queued','running','retry_wait')",[order.sourceMessageId])).rowCount) throw new ServiceError("VALIDATION_FAILED","Processing is already in progress for this order",409);
+    const runs=Number((await client.query("SELECT count(*)::int AS n FROM audit_events WHERE order_id=$1 AND data->>'action'='order.reprocess_requested'",[orderId])).rows[0].n);
+    if (runs>=REPROCESS_LIMIT && actor.role!=="admin") throw new ServiceError("BUDGET_EXCEEDED","Reprocess limit reached for this order; an administrator can run it again",422);
+    const jobId=id("job"),at=new Date().toISOString();
+    const updated:ValidatedDraft={...order,status:"parsing",version:order.version+1,approval:null,updatedAt:at};updated.contentHash=contentHash(updated);
+    await saveOrder(client,updated);
+    await client.query("INSERT INTO jobs(id,type,message_id,order_id,status) VALUES($1,'process_message',$2,$3,'queued')",[jobId,order.sourceMessageId,orderId]);
+    await audit(client,orderId,actor,"order.reprocess_requested",updated.version,{jobId,previousVersion:order.version,previousStatus:order.status,run:runs+1});
     return detail(client,orderId);
   });
 }
@@ -181,13 +290,20 @@ export async function approveOrder(actor:Session,orderId:string,input:ApproveReq
 }
 const unitMapping: Partial<Record<Unit,string>> = {each:"uom.product_uom_unit",pack:"pennbridge.uom_pack",box:"pennbridge.uom_box",pair:"pennbridge.uom_pair",roll:"pennbridge.uom_roll",metre:"uom.product_uom_meter",litre:"uom.product_uom_litre",kg:"uom.product_uom_kgm",...(process.env.ODOO_UNIT_EXTERNAL_IDS?JSON.parse(process.env.ODOO_UNIT_EXTERNAL_IDS):{})};
 export function setOdooUnitMapping(mapping: Partial<Record<Unit,string>>) { Object.assign(unitMapping,mapping); }
-const csvCell=(value:string)=>`"${value.replaceAll('"','""')}"`;
-export function renderOdooCsv(snapshot:Pick<ExportSnapshot,"externalId"|"customerExternalId"|"shippingAddressExternalId"|"poNumber"|"lines">):string {
+// Spreadsheet formula injection guard: text that starts with = + - @ (or tab/CR) is neutralised with a leading apostrophe.
+// Quantities and prices are validated decimals and bypass the guard so they stay numeric.
+const csvCell=(value:string,numeric=false)=>{
+  const safe=value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,"");
+  return `"${(!numeric&&/^[=+\-@\t\r]/.test(safe)?`'${safe}`:safe).replaceAll('"','""')}"`;
+};
+export function renderOdooCsv(snapshot:Pick<ExportSnapshot,"externalId"|"customerExternalId"|"shippingAddressExternalId"|"poNumber"|"lines"> & {currency?:string}):string {
+  const currency=snapshot.currency??"GBP";
+  if(!/^[A-Z]{3}$/.test(currency)) throw new ServiceError("VALIDATION_FAILED","Invalid order currency");
   const headers=["id","partner_id/id","partner_shipping_id/id","client_order_ref","currency_id/id","order_line/id","order_line/product_id/id","order_line/name","order_line/product_uom_qty","order_line/product_uom_id/id","order_line/price_unit"];
   const rows=snapshot.lines.map((line,index)=>{
     const unitId=unitMapping[line.unit];
     if(!unitId) throw new ServiceError("VALIDATION_FAILED",`No verified Odoo unit mapping configured for ${line.unit}`);
-    return [index===0?snapshot.externalId:"",index===0?snapshot.customerExternalId:"",index===0?snapshot.shippingAddressExternalId:"",index===0?snapshot.poNumber:"",index===0?"base.GBP":"",`${snapshot.externalId}_line_${index+1}`,line.productExternalId,line.description,line.quantity,unitId,line.unitPrice].map(csvCell).join(",");
+    return [index===0?snapshot.externalId:"",index===0?snapshot.customerExternalId:"",index===0?snapshot.shippingAddressExternalId:"",index===0?snapshot.poNumber:"",index===0?`base.${currency}`:"",`${snapshot.externalId}_line_${index+1}`,line.productExternalId,line.description,line.quantity,unitId,line.unitPrice].map((cell,column)=>csvCell(cell,column===8||column===10)).join(",");
   });
   return `${headers.join(",")}\n${rows.join("\n")}\n`;
 }
@@ -196,7 +312,8 @@ export async function exportOrder(actor:Session,orderId:string,input:ExportReque
   return transaction(async client=>{
     const order=await lockedOrder(client,orderId,input.expectedVersion);
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,2))",[input.idempotencyKey]);
-    const existing=(await client.query("SELECT data FROM exports WHERE idempotency_key=$1 OR (order_id=$2 AND version=$3)",[input.idempotencyKey,orderId,order.version])).rows[0]?.data as ExportSnapshot|undefined;
+    const existing=(await client.query("SELECT data FROM exports WHERE idempotency_key=$1 OR (order_id=$2 AND version=$3 AND data->>'state'<>'voided') ORDER BY (idempotency_key=$1) DESC LIMIT 1",[input.idempotencyKey,orderId,order.version])).rows[0]?.data as ExportSnapshot|undefined;
+    if(existing?.state==="voided") throw new ServiceError("VALIDATION_FAILED","That export was voided; use a new idempotency key to prepare another",409);
     if(existing) { if(existing.orderId!==orderId || existing.orderVersion!==order.version) throw new ServiceError("STALE_VERSION","Idempotency key belongs to a different order/version",409); return existing; }
     if(order.status!=="approved" || !order.approval || order.approval.invalidatedAt || order.approval.version!==order.version || order.approval.contentHash!==order.contentHash || contentHash(order)!==order.contentHash) throw new ServiceError("APPROVAL_REQUIRED","A current version-bound approval is required",409);
     await rejectBusinessDuplicate(client,order);
@@ -213,7 +330,7 @@ export async function exportOrder(actor:Session,orderId:string,input:ExportReque
     }
     const now=new Date().toISOString();
     const snapshot:ExportSnapshot={id:id("export"),orderId,orderVersion:order.version,approvalId:order.approval.id,contentHash:order.contentHash,idempotencyKey:input.idempotencyKey,externalId:`pennbridge.quote_${orderId.replace(/[^a-zA-Z0-9_]/g,"_")}`,
-      customerExternalId:customer.externalId,shippingAddressExternalId:address.externalId,poNumber:order.poNumber!,currency:"GBP",lines,total:order.total,mappingVersion:"odoo19-quotation-v2",artifactHash:"",filename:`${orderId}-v${order.version}.csv`,
+      customerExternalId:customer.externalId,shippingAddressExternalId:address.externalId,poNumber:order.poNumber!,currency:order.currency,lines,total:order.total,mappingVersion:"odoo19-quotation-v2",artifactHash:"",filename:`${orderId}-v${order.version}.csv`,
       state:"prepared",preparedBy:actor.userId,preparedAt:now,downloadedAt:null,verifiedAt:null,verifiedBy:null,quotationReference:null};
     const artifact=Buffer.from(renderOdooCsv(snapshot)); snapshot.artifactHash=sha256(artifact);
     await client.query("INSERT INTO exports(id,order_id,version,idempotency_key,data,artifact) VALUES($1,$2,$3,$4,$5,$6)",[snapshot.id,orderId,order.version,input.idempotencyKey,snapshot,artifact]);
@@ -221,24 +338,49 @@ export async function exportOrder(actor:Session,orderId:string,input:ExportReque
     return snapshot;
   });
 }
+/** Export states: prepared -> downloaded -> import_verified; prepared|downloaded -> voided (frees the version for a fresh export). */
 export async function downloadExport(actor:Session,orderId:string,exportId:string):Promise<{filename:string;content:Buffer}> {
   mutate(actor);
   return transaction(async client=>{
     const row=(await client.query("SELECT data,artifact FROM exports WHERE id=$1 AND order_id=$2 FOR UPDATE",[exportId,orderId])).rows[0];
     if(!row) throw new ServiceError("NOT_FOUND","Export not found",404);
     const snapshot:ExportSnapshot=row.data;
+    if(snapshot.state==="voided") throw new ServiceError("VALIDATION_FAILED","This export was voided and can no longer be downloaded",409);
     if(snapshot.state==="prepared") {snapshot.state="downloaded";snapshot.downloadedAt=new Date().toISOString();await client.query("UPDATE exports SET data=$2 WHERE id=$1",[exportId,snapshot]);}
     await audit(client,orderId,actor,"export.downloaded",snapshot.orderVersion,{exportId});
     return {filename:snapshot.filename,content:row.artifact};
   });
 }
 export async function verifyExport(actor:Session,orderId:string,exportId:string,input:VerifyExportRequest):Promise<ExportSnapshot> {
-  mutate(actor);
+  mutate(actor);input=VerifyExportRequestSchema.parse(input);
   return transaction(async client=>{
     const row=(await client.query("SELECT data FROM exports WHERE id=$1 AND order_id=$2 FOR UPDATE",[exportId,orderId])).rows[0];
     if(!row) throw new ServiceError("NOT_FOUND","Export not found",404);
-    const snapshot:ExportSnapshot={...row.data,state:"import_verified",verifiedAt:new Date().toISOString(),verifiedBy:actor.userId,quotationReference:input.quotationReference};
-    await client.query("UPDATE exports SET data=$2 WHERE id=$1",[exportId,snapshot]);await audit(client,orderId,actor,"export.import_verified",snapshot.orderVersion,{exportId,quotationReference:input.quotationReference});return snapshot;
+    const current:ExportSnapshot=row.data,reference=input.quotationReference.trim();
+    if(current.state==="import_verified") {
+      if(current.quotationReference===reference) return current; // idempotent replay
+      throw new ServiceError("VALIDATION_FAILED","This export was already verified with a different quotation reference",409);
+    }
+    if(current.state==="voided") throw new ServiceError("VALIDATION_FAILED","This export was voided",409);
+    if(current.state!=="downloaded") throw new ServiceError("VALIDATION_FAILED","Download the file and import it before verifying",409);
+    const snapshot:ExportSnapshot={...current,state:"import_verified",verifiedAt:new Date().toISOString(),verifiedBy:actor.userId,quotationReference:reference};
+    await client.query("UPDATE exports SET data=$2 WHERE id=$1",[exportId,snapshot]);await audit(client,orderId,actor,"export.import_verified",snapshot.orderVersion,{exportId,quotationReference:reference});return snapshot;
+  });
+}
+/** Withdraw an export that was never imported (wrong file, import failed). The order returns to approved so it can be exported again with a new idempotency key. */
+export async function voidExport(actor:Session,orderId:string,exportId:string,input:VoidExportRequest):Promise<ExportSnapshot> {
+  mutate(actor);input=VoidExportRequestSchema.parse(input);
+  return transaction(async client=>{
+    const row=(await client.query("SELECT data FROM exports WHERE id=$1 AND order_id=$2 FOR UPDATE",[exportId,orderId])).rows[0];
+    if(!row) throw new ServiceError("NOT_FOUND","Export not found",404);
+    const current:ExportSnapshot=row.data;
+    if(current.state==="voided") return current;
+    if(current.state==="import_verified") throw new ServiceError("VALIDATION_FAILED","A verified import cannot be voided here; reverse it in the destination system",409);
+    const now=new Date().toISOString(),snapshot:ExportSnapshot={...current,state:"voided",voidedAt:now,voidedBy:actor.userId,voidReason:input.reason.trim()};
+    await client.query("UPDATE exports SET data=$2 WHERE id=$1",[exportId,snapshot]);
+    const order:ValidatedDraft|undefined=(await client.query("SELECT data FROM orders WHERE id=$1 FOR UPDATE",[orderId])).rows[0]?.data;
+    if(order&&order.status==="exported"&&order.version===current.orderVersion) await saveOrder(client,{...order,status:"approved",updatedAt:now},false);
+    await audit(client,orderId,actor,"export.voided",snapshot.orderVersion,{exportId,reason:snapshot.voidReason!});return snapshot;
   });
 }
 export async function cancelOrder(actor:Session,orderId:string,input:CancelRequest):Promise<OrderDetail> {
@@ -290,8 +432,11 @@ export async function retryJob(actor:Session,jobId:string):Promise<Job> {
 export async function stats(actor:Session) {
   allow(actor);await initialiseDatabase();
   const [statuses,catalogue,jobs,usage]=await Promise.all([pool.query("SELECT status,count(*)::int AS count FROM orders GROUP BY status"),pool.query("SELECT count(*)::int AS count FROM products"),pool.query("SELECT count(*)::int AS count FROM jobs WHERE status IN ('queued','running','retry_wait')"),pool.query("SELECT data FROM model_usage")]);
+  // live if configured; mock only in DEMO_MODE; otherwise reviewers enter orders manually.
+  const live=process.env.LIVE_AI_ENABLED==="true"&&(process.env.AI_PROVIDER==="gemini"?!!(process.env.GEMINI_API_KEY||process.env.GEMINI_API_KEY_FILE):!!process.env.ANTHROPIC_API_KEY);
+  const mode:"live"|"mock"|"manual"=live?"live":process.env.DEMO_MODE==="true"?"mock":"manual";
   const counts=Object.fromEntries(statuses.rows.map(r=>[r.status,r.count]));
-  return {counts,totalOrders:statuses.rows.reduce((n,r)=>n+r.count,0),catalogueCount:catalogue.rows[0].count,pendingJobs:jobs.rows[0].count,mode:process.env.LIVE_AI_ENABLED==="true"?"live":"mock",provider:process.env.LIVE_AI_ENABLED==="true"?(process.env.AI_PROVIDER==="gemini"?"gemini":"anthropic"):"mock",model:process.env.LIVE_AI_ENABLED==="true"?process.env.EXTRACTION_MODEL||null:null,modelCalls:usage.rowCount??0,modelUsage:usage.rows.map(r=>r.data)};
+  return {counts,totalOrders:statuses.rows.reduce((n,r)=>n+r.count,0),catalogueCount:catalogue.rows[0].count,pendingJobs:jobs.rows[0].count,mode,provider:mode==="live"?(process.env.AI_PROVIDER==="gemini"?"gemini":"anthropic"):mode,model:mode==="live"?process.env.EXTRACTION_MODEL||null:null,modelCalls:usage.rowCount??0,modelUsage:usage.rows.map(r=>r.data)};
 }
 export async function intake(actor:Session,input:IntakeRequest):Promise<IntakeResponse> {
   allow(actor,["reviewer","admin","ingestion"]);input=IntakeRequestSchema.parse(input);
@@ -317,7 +462,7 @@ export async function intake(actor:Session,input:IntakeRequest):Promise<IntakeRe
     const storagePath=path.join(storageRoot,docId);await writeFile(storagePath,content,{mode:0o600});
     const document:Document={id:docId,messageId,filename:input.filename,mediaType:input.mediaType,sizeBytes:content.length,contentHash:hash,kind:["synthetic_email","email","mailpit"].includes(input.channel)?"email":"upload",parser:null,pageCount:null,text:null,createdAt:now};
     await client.query("INSERT INTO documents(id,message_id,data,storage_path) VALUES($1,$2,$3,$4)",[docId,messageId,document,storagePath]);
-    const order:ValidatedDraft={id:orderId,version:1,contentHash:"",sourceMessageId:messageId,customerId:source.trustedCustomerId,customerName:null,intent:"unknown",status:"received",poNumber:null,relatedOrderId:null,revision:null,requestedDeliveryDate:null,shippingAddressId:null,currency:"GBP",catalogueVersion:CATALOGUE_VERSION,lines:[],reasons:[],total:"0.00",approval:null,createdAt:now,updatedAt:now,processingMode:"mock"};order.contentHash=contentHash(order);
+    const order:ValidatedDraft={id:orderId,version:1,contentHash:"",sourceMessageId:messageId,customerId:source.trustedCustomerId,customerName:null,intent:"unknown",status:"received",poNumber:null,relatedOrderId:null,revision:null,requestedDeliveryDate:null,shippingAddressId:null,currency:"GBP",catalogueVersion:CATALOGUE_VERSION,lines:[],reasons:[],total:"0.00",approval:null,createdAt:now,updatedAt:now,processingMode:"mock",senderEmail:null,subject:input.filename,pricingDate:londonDate(now),suggestedCustomer:null,removedLines:[]};order.contentHash=contentHash(order);
     await saveOrder(client,order);await client.query("INSERT INTO jobs(id,type,message_id,order_id,status) VALUES($1,'process_message',$2,$3,'queued')",[jobId,messageId,orderId]);await audit(client,orderId,actor,"intake.received",1,{messageId,channel:input.channel});
     return {messageId,orderId,jobId,duplicate:false};
   });
@@ -328,7 +473,7 @@ export async function getDocument(actor:Session,documentId:string):Promise<{docu
 
 export interface ParsedInput {
   documents:Document[];evidence:DocumentEvidence[];text:string;structured?:ExtractedOrder;reasons?:ExtractedOrder["reasons"];
-  files?:Array<{documentId:string;content:Buffer}>;sender?:string;subject?:string;externalMessageId?:string;
+  files?:Array<{documentId:string;content:Buffer}>;sender?:string;subject?:string;externalMessageId?:string;authResults?:string;
 }
 export interface ProcessingDependencies { parse:(input:{filename:string;mediaType:string;content:Buffer;messageId:string;documentId:string})=>Promise<ParsedInput>;provider:ExtractionProvider; }
 export async function processMessage(job:Job,owner:string,dependencies:ProcessingDependencies):Promise<void> {
@@ -356,9 +501,18 @@ export async function processMessage(job:Job,owner:string,dependencies:Processin
     if(!lease || lease.status!=="running" || lease.lease_owner!==owner || new Date(lease.lease_expires_at).getTime()<=Date.now())throw new ServiceError("STALE_VERSION","Worker lease expired before commit",409);
     const row=(await client.query("SELECT data FROM orders WHERE id=$1 FOR UPDATE",[job.orderId])).rows[0];const existing:ValidatedDraft=row.data;
     if(!["received","parsing","failed"].includes(existing.status)) {await client.query("UPDATE jobs SET status='succeeded',lease_owner=NULL,lease_expires_at=NULL,updated_at=now() WHERE id=$1",[job.id]);return;}
-    const context=await validationContext(client,source.trustedCustomerId,source.receivedAt);
+    // Customer precedence: reviewer/harness assignment already on the order, then a TRUSTED sender mapping. An untrusted mapping is only a suggestion.
+    let customerId=existing.customerId??source.trustedCustomerId,suggested:SuggestedCustomer|null=null;
+    if(!customerId){
+      const hit=await resolveSender(client,source.sender,parsed.authResults);
+      if(hit?.trusted){customerId=hit.suggestion.customerId;source.identitySource="sender_mapping";}
+      else if(hit)suggested=hit.suggestion;
+    }
+    const pricingDate=existing.pricingDate??londonDate(source.receivedAt);
+    const context=await validationContext(client,customerId,source.receivedAt,pricingDate,suggested?.customerName);
     const validation=await validate(extracted,context);
-    const order:ValidatedDraft={...existing,...validation,customerId:context.customer?.id??null,customerName:context.customer?.name??null,intent:extracted.intent,poNumber:extracted.poNumber,revision:extracted.revision,requestedDeliveryDate:extracted.requestedDeliveryDate,version:existing.version+1,updatedAt:new Date().toISOString(),processingMode:parsed.structured?"structured":dependencies.provider.mode};
+    const order:ValidatedDraft={...existing,...validation,catalogueVersion:context.catalogueVersion,customerId:context.customer?.id??null,customerName:context.customer?.name??null,intent:extracted.intent,poNumber:extracted.poNumber,revision:extracted.revision,requestedDeliveryDate:extracted.requestedDeliveryDate,version:existing.version+1,updatedAt:new Date().toISOString(),processingMode:parsed.structured?"structured":dependencies.provider.mode,
+      senderEmail:senderParts(source.sender)?.email??null,subject:source.subject,pricingDate,suggestedCustomer:context.customer?null:suggested,removedLines:[]};
     await applyBusinessDuplicate(client,order);
     order.contentHash=contentHash(order);
     await client.query("UPDATE messages SET data=$2,extracted=$3 WHERE id=$1",[source.id,source,extracted]);
@@ -368,13 +522,64 @@ export async function processMessage(job:Job,owner:string,dependencies:Processin
     await client.query("UPDATE jobs SET status='succeeded',lease_owner=NULL,lease_expires_at=NULL,error_code=NULL,error_message=NULL,updated_at=now() WHERE id=$1",[job.id]);await audit(client,order.id,owner,"order.processed",order.version,{mode:order.processingMode});
   });
 }
+/** Permanent failures (bad file, budget, config) dead-letter at once; transient ones (timeout, 429/5xx, network, DB) back off and retry. Users only ever see the safe message; raw detail goes to the log. */
 export async function processingFailed(job:Job,owner:string,error:unknown):Promise<void> {
-  const parsedCode=ReasonCodeSchema.safeParse((error as {code?:unknown})?.code);
-  const code=parsedCode.success?parsedCode.data:(error as {name?:string})?.name==="ZodError"?"MODEL_OUTPUT_INVALID":"PARSING_FAILED";const message=error instanceof Error?error.message:"Processing failed";
+  const {code,retryable,message}=classifyFailure(error,ReasonCodeSchema.options);
+  console.error(JSON.stringify({event:"processing.error",jobId:job.id,code,retryable,detail:(error instanceof Error?error.message:String(error)).slice(0,300)}));
+  if(!retryable) await pool.query("UPDATE jobs SET max_attempts=attempts WHERE id=$1 AND lease_owner=$2 AND status='running'",[job.id,owner]);
   await failJob(job.id,owner,code,message);
   await transaction(async client=>{
     const row=(await client.query("SELECT status FROM jobs WHERE id=$1 FOR UPDATE",[job.id])).rows[0];if(row?.status!=="dead_letter" || !job.orderId)return;
     const current=(await client.query("SELECT data FROM orders WHERE id=$1 FOR UPDATE",[job.orderId])).rows[0]?.data as ValidatedDraft|undefined;
-    if(current && ["received","parsing","failed"].includes(current.status)) {current.status="failed";current.version++;current.reasons=[reason(code,message)];current.updatedAt=new Date().toISOString();current.contentHash=contentHash(current);await saveOrder(client,current);await audit(client,current.id,owner,"processing.failed",current.version,{code});}
+    if(current && ["received","parsing","failed"].includes(current.status)) {current.status="failed";current.version++;current.reasons=[reason(code,message)];current.updatedAt=new Date().toISOString();current.contentHash=contentHash(current);await saveOrder(client,current);await audit(client,current.id,owner,"processing.failed",current.version,{code,retryable});}
+  });
+}
+
+// ---- Sender -> customer mapping -------------------------------------------------------------------------------------------
+// The From header is attacker-controlled. A mapping therefore only becomes the order's customer when an admin marked it trusted
+// AND the receiving server's SPF/DKIM/DMARC result passed (REQUIRE_SENDER_AUTH=false relaxes this to 'did not fail').
+// Everything else is shown as a suggestion the reviewer must confirm. Precedence: exact address, domain, customer approvedSenders.
+async function resolveSender(client:DbClient,sender:string|null|undefined,authResults?:string):Promise<{trusted:boolean;suggestion:SuggestedCustomer}|null> {
+  const parts=senderParts(sender);if(!parts)return null;
+  const mapped=async(kind:"email"|"domain",value:string)=>(await client.query("SELECT m.id,m.customer_id,m.trusted,c.data->>'name' AS name FROM sender_mappings m JOIN customers c ON c.id=m.customer_id WHERE m.kind=$1 AND m.value=$2",[kind,value])).rows[0];
+  let matchedOn:SuggestedCustomer["matchedOn"]="email",row=await mapped("email",parts.email);
+  if(!row){matchedOn="domain";row=await mapped("domain",parts.domain);}
+  if(!row){
+    const approved=(await client.query("SELECT id,data->>'name' AS name FROM customers WHERE EXISTS(SELECT 1 FROM jsonb_array_elements_text(data->'approvedSenders') s WHERE lower(s)=$1) LIMIT 2",[parts.email])).rows;
+    if(approved.length!==1)return null;
+    row={id:null,customer_id:approved[0].id,trusted:false,name:approved[0].name};matchedOn="approved_sender";
+  }
+  let trusted=!!row.trusted,note:string|null=null;
+  const verdict=authVerdict(authResults);
+  if(trusted&&(verdict==="fail"||(process.env.REQUIRE_SENDER_AUTH!=="false"&&verdict!=="pass"))){trusted=false;note="Trusted mapping not applied: the sender's SPF/DKIM/DMARC check did not pass, so the From address may be forged.";}
+  if(trusted&&matchedOn==="domain"&&isFreemailDomain(parts.domain)){trusted=false;note="Domain mappings on public mail providers are never trusted.";}
+  return {trusted,suggestion:{customerId:row.customer_id,customerName:row.name,mappingId:row.id,matchedOn,sender:parts.email,note}};
+}
+const mappingFromRow=(r:Record<string,any>):SenderMapping=>({id:r.id,kind:r.kind,value:r.value,customerId:r.customer_id,customerName:r.name??null,trusted:r.trusted,createdBy:r.created_by,createdAt:new Date(r.created_at).toISOString()});
+export async function listSenderMappings(actor:Session):Promise<SenderMapping[]> {
+  allow(actor,["reviewer","admin"]);await initialiseDatabase();
+  return (await pool.query("SELECT m.*,c.data->>'name' AS name FROM sender_mappings m JOIN customers c ON c.id=m.customer_id ORDER BY m.kind,m.value")).rows.map(mappingFromRow);
+}
+/** Create or update (by kind+value) a mapping. Admin only; trusting a public mail-provider domain is refused. */
+export async function upsertSenderMapping(actor:Session,input:SenderMappingInput):Promise<SenderMapping> {
+  allow(actor,["admin"]);input=SenderMappingInputSchema.parse(input);await initialiseDatabase();
+  const value=input.value.trim().toLowerCase();
+  if(input.kind==="email"?!senderParts(value)||senderParts(value)!.email!==value:!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(value)) throw new ServiceError("VALIDATION_FAILED",`Enter a valid ${input.kind==="email"?"email address":"domain such as example.com"}`,400);
+  if(input.kind==="domain"&&input.trusted&&isFreemailDomain(value)) throw new ServiceError("VALIDATION_FAILED","A public mail provider domain cannot be trusted; map individual addresses instead",400);
+  return transaction(async client=>{
+    if(!(await client.query("SELECT 1 FROM customers WHERE id=$1",[input.customerId])).rowCount) throw new ServiceError("VALIDATION_FAILED","Unknown customer",400);
+    const row=(await client.query(`INSERT INTO sender_mappings(id,kind,value,customer_id,trusted,created_by) VALUES($1,$2,$3,$4,$5,$6)
+      ON CONFLICT(kind,value) DO UPDATE SET customer_id=excluded.customer_id,trusted=excluded.trusted,created_by=excluded.created_by RETURNING *`,[id("sender"),input.kind,value,input.customerId,input.trusted,actor.userId])).rows[0];
+    await audit(client,null,actor,"sender_mapping.saved",null,{mappingId:row.id,kind:input.kind,value,customerId:input.customerId,trusted:input.trusted});
+    row.name=(await client.query("SELECT data->>'name' AS name FROM customers WHERE id=$1",[input.customerId])).rows[0]?.name;
+    return mappingFromRow(row);
+  });
+}
+export async function deleteSenderMapping(actor:Session,mappingId:string):Promise<{ok:true}> {
+  allow(actor,["admin"]);await initialiseDatabase();
+  return transaction(async client=>{
+    const row=(await client.query("DELETE FROM sender_mappings WHERE id=$1 RETURNING kind,value",[mappingId])).rows[0];
+    if(!row)throw new ServiceError("NOT_FOUND","Sender mapping not found",404);
+    await audit(client,null,actor,"sender_mapping.deleted",null,{mappingId,kind:row.kind,value:row.value});return {ok:true};
   });
 }

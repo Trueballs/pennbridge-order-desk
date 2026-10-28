@@ -1,0 +1,37 @@
+{
+	admin off
+}
+
+{$PB_DOMAIN} {
+	# tls-auto.conf (Let's Encrypt), tls-internal.conf (Caddy's own CA) or tls-custom.conf (your certificate), chosen by PB_TLS_MODE.
+	import /etc/caddy/tls-{$PB_TLS_MODE}.conf
+
+	encode zstd gzip
+	request_body {
+		max_size 16MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	reverse_proxy app:3087 {
+		# Docker DNS is consulted on each new connection; if `app` was just recreated, retry rather than answer 502.
+		lb_try_duration 15s
+		lb_try_interval 250ms
+		# Overwrite, never append: Caddy is the edge, so client-supplied values must not reach the login throttle.
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Real-IP {remote_host}
+		health_uri /api/health
+		health_interval 5s
+		health_timeout 3s
+		transport http {
+			dial_timeout 5s
+			response_header_timeout 90s
+		}
+	}
+	log {
+		output stdout
+		format json
+	}
+}

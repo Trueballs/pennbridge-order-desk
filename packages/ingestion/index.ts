@@ -12,6 +12,8 @@ export interface ParsedInput {
   files: {documentId: string; content: Buffer}[];
   structured?: ExtractedOrder; reasons: Reason[];
   sender?: string; subject?: string; externalMessageId?: string;
+  /** Receiving server's Authentication-Results header(s), if any; used to downgrade trusted sender mappings that fail SPF/DKIM/DMARC. */
+  authResults?: string;
 }
 export function parserReason(code: Reason['code'], message: string): Reason {
   return {code,message,severity:'blocking',lineId:null,evidenceIds:[],resolved:false,resolution:null};
@@ -68,7 +70,8 @@ export async function parseInput(input: {filename:string;mediaType:string;conten
     const mail=await simpleParser(input.content,{skipHtmlToText:true,skipTextToHtml:true,skipImageLinks:true});
     const raw:Document={id:input.documentId,messageId:input.messageId,filename:input.filename,mediaType:'message/rfc822',sizeBytes:input.content.length,contentHash:createHash('sha256').update(input.content).digest('hex'),kind:'email',parser:'mime',pageCount:null,text:null,createdAt};
     output.documents.push(raw);output.files.push({documentId:raw.id,content:input.content});
-    output.sender=mail.from?.value[0]?.address;output.subject=mail.subject;output.externalMessageId=mail.messageId;
+    output.sender=mail.from?.value[0]?.address;{const ar=mail.headers.get('authentication-results');const list=(Array.isArray(ar)?ar:ar?[ar]:[]).map(v=>typeof v==='string'?v:typeof v==='object'&&v&&'text' in v?String((v as {text:unknown}).text):'').filter(Boolean);// Only the topmost header was added by our receiving server; lower ones may be forged by the sender (RFC 8601 §5).
+if(list.length)output.authResults=list[0].slice(0,2000);}output.subject=mail.subject;output.externalMessageId=mail.messageId;
     await add(Buffer.from(mail.text || (mail.html?plainHtml(mail.html):'')), 'Email body.txt','text/plain','body',`${input.documentId}_body`);
     if(mail.attachments.length>10)output.reasons.push(parserReason('DOCUMENT_TOO_LONG','Email exceeds ten-attachment limit.'));
     for(const [i,a]of mail.attachments.slice(0,10).entries()){

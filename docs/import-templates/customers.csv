@@ -1,0 +1,2 @@
+id,name,status,approved_senders,external_id
+CUST100,Example Engineering Ltd,active,buyer@example-engineering.co.uk;ap@example-engineering.co.uk,

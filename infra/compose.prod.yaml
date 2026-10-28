@@ -1,0 +1,150 @@
+# Production stack: PostgreSQL, app, worker, Caddy (HTTPS) and a nightly backup job. No Mailpit, no demo data, no published database port.
+# Always run through scripts/pbctl.sh (or pass --env-file .env): secrets and settings come from the generated .env.
+name: pennbridge
+x-logging: &logging
+  driver: json-file
+  options: {max-size: 10m, max-file: '5'}
+x-app-env: &app-env
+  DATABASE_URL: postgresql://pennbridge:${POSTGRES_PASSWORD:?run scripts/install.sh to generate .env}@db:5432/pennbridge
+  PROJECT_ROOT: /app
+  STORAGE_ROOT: /app/runtime/storage
+  LIVE_AI_ENABLED: ${LIVE_AI_ENABLED:-false}
+  AI_PROVIDER: ${AI_PROVIDER:-gemini}
+  EXTRACTION_MODEL: ${EXTRACTION_MODEL:-gemini-3.5-flash-lite}
+  AI_INPUT_USD_PER_MILLION: ${AI_INPUT_USD_PER_MILLION:-0.30}
+  AI_OUTPUT_USD_PER_MILLION: ${AI_OUTPUT_USD_PER_MILLION:-2.50}
+  AI_PRICING_VERSION: ${AI_PRICING_VERSION:-gemini-3.5-flash-lite-2026-10-28}
+  AI_RUN_BUDGET_USD: ${AI_RUN_BUDGET_USD:-5.00}
+  AI_ORDER_BUDGET_USD: ${AI_ORDER_BUDGET_USD:-0.25}
+  BUDGET_RELEASE_GRACE_MINUTES: ${BUDGET_RELEASE_GRACE_MINUTES:-15}
+  ODOO_UNIT_EXTERNAL_IDS: '{"each":"uom.product_uom_unit","pack":"pennbridge.uom_pack","box":"pennbridge.uom_box","pair":"pennbridge.uom_pair","roll":"pennbridge.uom_roll","metre":"uom.product_uom_meter","litre":"uom.product_uom_litre","kg":"uom.product_uom_kgm"}'
+x-hardened: &hardened
+  restart: unless-stopped
+  logging: *logging
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+services:
+  db:
+    <<: *hardened
+    image: postgres:17@sha256:31ba9c94a03ada9988f2bb493a22a75eef3a185884533e5cdbcd498ea835b08f
+    cap_drop: []   # the stock entrypoint needs its default capabilities to drop to the postgres user
+    environment:
+      POSTGRES_USER: pennbridge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run scripts/install.sh to generate .env}
+      POSTGRES_DB: pennbridge
+    volumes: [db-data:/var/lib/postgresql/data]
+    networks: [private]
+    shm_size: 256m
+    mem_limit: 2g
+    cpus: 2
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U pennbridge -d pennbridge']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  app:
+    <<: *hardened
+    build: {context: .., dockerfile: infra/Dockerfile}
+    image: pennbridge-app:prod
+    command: [npm, run, start]
+    init: true
+    depends_on:
+      db: {condition: service_healthy}
+    environment: *app-env
+    volumes: [storage:/app/runtime/storage]
+    networks: [private]
+    read_only: true
+    tmpfs: ['/tmp:size=64m', '/app/apps/web/.next/cache:size=256m,uid=1000']
+    mem_limit: 1g
+    cpus: 2
+    pids_limit: 512
+  worker:
+    <<: *hardened
+    image: pennbridge-app:prod
+    command: [npm, run, worker]
+    init: true
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      PB_ROLE: worker
+    volumes: [storage:/app/runtime/storage]
+    networks: [private]
+    read_only: true
+    tmpfs: ['/tmp:size=256m']
+    stop_grace_period: 70s
+    mem_limit: 1536m
+    cpus: 2
+    pids_limit: 512
+    healthcheck:
+      test: [CMD, node, -e, "process.exit(Date.now()-require('fs').statSync('/tmp/worker.alive').mtimeMs<90000?0:1)"]
+      interval: 20s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+  proxy:
+    <<: *hardened
+    image: caddy:2.10-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    cap_add: [NET_BIND_SERVICE]
+    depends_on:
+      app: {condition: service_healthy}
+    environment:
+      PB_DOMAIN: ${PB_DOMAIN:?run scripts/install.sh to generate .env}
+      PB_TLS_MODE: ${PB_TLS_MODE:-auto}
+    ports:
+      - '${PB_BIND:-0.0.0.0}:${PB_HTTP_PORT:-80}:80'
+      - '${PB_BIND:-0.0.0.0}:${PB_HTTPS_PORT:-443}:443'
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/tls-auto.conf:/etc/caddy/tls-auto.conf:ro
+      - ./caddy/tls-internal.conf:/etc/caddy/tls-internal.conf:ro
+      - ./caddy/tls-custom.conf:/etc/caddy/tls-custom.conf:ro
+      - ${PB_CERT_DIR:-../certs}:/certs:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [private, edge]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 256m
+    cpus: 1
+  backup:
+    <<: *hardened
+    image: postgres:17@sha256:31ba9c94a03ada9988f2bb493a22a75eef3a185884533e5cdbcd498ea835b08f
+    entrypoint: [/bin/bash, /ops.sh]
+    command: [loop]
+    cap_add: [DAC_READ_SEARCH]   # read the documents volume (files are owned by the app user, mode 0600)
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_RETAIN_DAYS: ${BACKUP_RETAIN_DAYS:-14}
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-02}
+      BACKUP_MINUTE_UTC: ${BACKUP_MINUTE_UTC:-30}
+    volumes:
+      - ./backup/ops.sh:/ops.sh:ro
+      - storage:/storage:ro
+      - ${PB_BACKUP_DIR:-../backups}:/backups
+    networks: [private]
+    mem_limit: 512m
+  # One-off tools (not started by `up`): restore writes the database and the documents volume.
+  restore:
+    image: postgres:17@sha256:31ba9c94a03ada9988f2bb493a22a75eef3a185884533e5cdbcd498ea835b08f
+    profiles: [tools]
+    entrypoint: [/bin/bash, /ops.sh]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER]
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backup/ops.sh:/ops.sh:ro
+      - storage:/storage
+      - ${PB_BACKUP_DIR:-../backups}:/backups:ro
+    networks: [private]
+networks:
+  private: {internal: true}
+  edge: {}
+volumes:
+  db-data:
+  storage:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,53 @@
+# Added automatically by scripts/pbctl.sh when the mailbox is configured (runtime/mailbox/config.json exists, made by scripts/configure_mailbox.py).
+services:
+  app:
+    environment:
+      MAILBOX_INGESTION_TOKEN_FILE: /run/secrets/mailbox_token
+    secrets: [mailbox_token]
+    networks: [private, mailbox-intake]
+  mailbox:
+    image: pennbridge-app:prod
+    command: [npm, run, mailbox]
+    init: true
+    depends_on:
+      app: {condition: service_healthy}
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: 10m, max-file: '5'}}
+    environment:
+      MAILBOX_CONFIG_FILE: /run/mailbox/config.json
+      MAILBOX_PASSWORD_FILE: /run/secrets/mailbox_password
+      MAILBOX_TOKEN_FILE: /run/secrets/mailbox_token
+      MAILBOX_STATE_FILE: /app/runtime/mailbox-state/checkpoint.json
+      MAILBOX_INTAKE_URL: http://app:3087/api/intake
+    volumes:
+      - ${PB_MAILBOX_DIR:-../runtime/mailbox}/config.json:/run/mailbox/config.json:ro
+      - mailbox-state:/app/runtime/mailbox-state
+    secrets: [mailbox_password, mailbox_token]
+    networks: [mailbox-intake, mailbox-outbound]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 512m
+    # status.json is rewritten after every poll (backoff caps well under 10 minutes); alert.json exists while credentials are rejected.
+    healthcheck:
+      test: [CMD, node, -e, "const fs=require('fs');const d='/app/runtime/mailbox-state/';process.exit(!fs.existsSync(d+'alert.json')&&Date.now()-fs.statSync(d+'status.json').mtimeMs<600000?0:1)"]
+      interval: 60s
+      timeout: 5s
+      start_period: 180s
+      retries: 3
+  worker:
+    environment:
+      MAILBOX_STATE_DIR: /app/runtime/mailbox-state
+    volumes:
+      - mailbox-state:/app/runtime/mailbox-state:ro
+networks:
+  mailbox-intake: {internal: true}
+  mailbox-outbound: {}
+volumes:
+  mailbox-state:
+secrets:
+  mailbox_password:
+    file: ${PB_MAILBOX_DIR:-../runtime/mailbox}/password
+  mailbox_token:
+    file: ${PB_MAILBOX_DIR:-../runtime/mailbox}/token

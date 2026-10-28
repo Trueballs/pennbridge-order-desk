@@ -1,16 +1,28 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { hash } from "bcryptjs";
-import { transaction } from "./index";
+import { transaction, type DbClient } from "./index";
 import type { Address, Customer, Product, PriceAgreement } from "@pennbridge/contracts";
 
 export const CATALOGUE_VERSION = "synthetic-master-2026-10-28-v1";
+export const demoMode = () => process.env.DEMO_MODE === "true";
+/** Current catalogue version: newest CSV-import version, else the bundled synthetic one. Validation must stamp orders with this. */
+export async function currentCatalogueVersion(client: DbClient): Promise<string> {
+  const table = (await client.query("SELECT to_regclass('catalogue_versions') AS t")).rows[0].t;
+  if (!table) return CATALOGUE_VERSION;
+  return (await client.query("SELECT version FROM catalogue_versions ORDER BY created_at DESC,version DESC LIMIT 1")).rows[0]?.version ?? CATALOGUE_VERSION;
+}
 const root = process.env.PROJECT_ROOT ?? process.cwd();
 async function json(file: string) { return JSON.parse(await readFile(path.join(root, file), "utf8")); }
 async function optional(file: string, fallback: unknown) { try { return await json(file); } catch (e: any) { if (e.code === "ENOENT") return fallback; throw e; } }
 export async function seedDatabase(): Promise<void> {
   await transaction(async (client) => {
     await client.query("SELECT pg_advisory_xact_lock(57282102)");
+    // Production starts empty: no demo accounts and no synthetic master data. First admin comes from scripts/create_admin.ts.
+    if (!demoMode()) {
+      if (!Number((await client.query("SELECT count(*) FROM users WHERE role='admin' AND active")).rows[0].count)) console.warn(JSON.stringify({ event: "setup.no_admin", message: "No administrator exists. Run: npx tsx scripts/create_admin.ts" }));
+      return;
+    }
     for (const [role, name] of [["admin","Demo administrator"],["reviewer","Demo reviewer"],["viewer","Demo viewer"]]) {
       const password = process.env[`DEMO_${role.toUpperCase()}_PASSWORD`] ?? `${role}-demo`;
       await client.query("INSERT INTO users(id,email,name,role,password_hash) VALUES($1,$2,$3,$4,$5) ON CONFLICT(email) DO NOTHING", [role,`${role}@pennbridge.example`,name,role,await hash(password,10)]);
@@ -44,6 +56,7 @@ export async function seedDatabase(): Promise<void> {
     await client.query("INSERT INTO price_agreements(id,customer_id,product_id,valid_from,valid_to,minimum_quantity,data) SELECT x->>'id',x->>'customerId',x->>'productId',(x->>'validFrom')::date,(x->>'validTo')::date,(x->>'minimumQuantity')::numeric,x FROM jsonb_array_elements($1::jsonb) x", [JSON.stringify(prices)]);
     const stock = Object.entries(reference.stock).map(([productId,v]:[string,any]) => ({productId,availableQuantity:String(v.available),observedAt:new Date(v.as_of).toISOString()}));
     await client.query("INSERT INTO stock_snapshots(product_id,data) SELECT x->>'productId',x FROM jsonb_array_elements($1::jsonb) x", [JSON.stringify(stock)]);
+    if ((await client.query("SELECT to_regclass('catalogue_versions') AS t")).rows[0].t) await client.query("INSERT INTO catalogue_versions(version,note) VALUES($1,'synthetic demo seed') ON CONFLICT DO NOTHING", [CATALOGUE_VERSION]);
     if (rawHistory.length) await client.query("INSERT INTO synthetic_history(id,customer_id,ordered_at,data) SELECT x->>'id',x->>'customer_id',(x->>'ordered_at')::date,x FROM jsonb_array_elements($1::jsonb) x", [JSON.stringify(rawHistory)]);
   });
 }

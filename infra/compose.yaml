@@ -8,6 +8,7 @@ services:
       POSTGRES_DB: pennbridge
     volumes: [desk-db:/var/lib/postgresql/data]
     networks: [private]
+    restart: unless-stopped
     healthcheck:
       test: [CMD-SHELL, 'pg_isready -U pennbridge -d pennbridge']
       interval: 3s
@@ -20,6 +21,7 @@ services:
       MP_DATABASE: /data/mailpit.db
     volumes: [desk-mail:/data]
     networks: [private]
+    restart: unless-stopped
   app:
     build: {context: .., dockerfile: infra/Dockerfile}
     image: pennbridge-app:local
@@ -33,9 +35,12 @@ services:
       LIVE_AI_ENABLED: 'false'
       MAILPIT_URL: http://mailpit:8025
       SESSION_COOKIE_SECURE: 'false'
+      DEMO_MODE: 'true'
       ODOO_UNIT_EXTERNAL_IDS: '{"each":"uom.product_uom_unit","pack":"pennbridge.uom_pack","box":"pennbridge.uom_box","pair":"pennbridge.uom_pair","roll":"pennbridge.uom_roll","metre":"uom.product_uom_meter","litre":"uom.product_uom_litre","kg":"uom.product_uom_kgm"}'
     volumes: [desk-storage:/app/runtime/storage]
     networks: [private]
+    restart: unless-stopped
+    init: true
   worker:
     image: pennbridge-app:local
     command: [npm, run, worker]
@@ -44,12 +49,22 @@ services:
     environment: *app-env
     volumes: [desk-storage:/app/runtime/storage]
     networks: [private]
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 70s
+    healthcheck:
+      test: [CMD, node, -e, "process.exit(Date.now()-require('fs').statSync('/tmp/worker.alive').mtimeMs<90000?0:1)"]
+      interval: 20s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
   proxy:
     image: nginx:1.29.3-alpine
     depends_on: [app, mailpit]
     ports: ['127.0.0.1:3087:3087', '127.0.0.1:8027:8027']
     volumes: ['./proxy.conf:/etc/nginx/nginx.conf:ro']
     networks: [private, web]
+    restart: unless-stopped
     read_only: true
     tmpfs: [/var/cache/nginx, /var/run]
 networks:
