@@ -24,6 +24,10 @@ if [[ -s runtime/mailbox/config.json && -s runtime/mailbox/password && -s runtim
   files+=(-f infra/mailbox.compose.yaml); services+=(mailbox)
 fi
 files+=(-f infra/live-ai.compose.yaml)
+# Optional direct Odoo push (docs/ODOO-IMPORT.md "Direct push"): enabled when the local key file and the Odoo proof network exist.
+if [[ -s runtime/odoo/odoo_api_key ]] && docker network inspect "${ODOO_NETWORK:-pennbridge-odoo-proof_odoo-ingress}" >/dev/null 2>&1; then
+  export ODOO_USER="${ODOO_USER:-pennbridge-admin}"; files+=(-f infra/odoo-push.compose.yaml)
+fi
 docker compose "${files[@]}" up -d --build "${services[@]}"
 # nginx caches the old app address after recreation and would return 502.
 docker compose "${files[@]}" restart proxy

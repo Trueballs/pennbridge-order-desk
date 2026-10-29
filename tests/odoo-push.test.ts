@@ -143,7 +143,10 @@ describe("Odoo push configuration", () => {
   });
   it("validateEnv requires all ODOO_* settings together and an existing key file in the worker", () => {
     const base = { DEMO_MODE: "true" };
-    expect(() => validateEnv({ ...base, ODOO_URL: "http://odoo" }, "app")).toThrow(/ODOO_DB.*ODOO_USER.*ODOO_API_KEY_FILE/s);
+    expect(() => validateEnv({ ...base, ODOO_URL: "http://odoo" }, "app")).toThrow(/ODOO_DB.*ODOO_USER/s);
+    expect(() => validateEnv({ ...base, ODOO_URL: "http://odoo" }, "worker")).toThrow(/ODOO_API_KEY_FILE/);
+    // The app never holds the key; it only needs the non-secret settings (regression: dev overlay crashed the app).
+    expect(() => validateEnv({ ...base, ODOO_URL: "http://odoo", ODOO_DB: "d", ODOO_USER: "u" }, "app")).not.toThrow();
     expect(() => validateEnv({ ...base, ODOO_URL: "http://odoo", ODOO_DB: "d", ODOO_USER: "u", ODOO_API_KEY_FILE: "/nope/key" }, "app")).not.toThrow();
     expect(() => validateEnv({ ...base, ODOO_URL: "http://odoo", ODOO_DB: "d", ODOO_USER: "u", ODOO_API_KEY_FILE: "/nope/key" }, "worker")).toThrow(/not found/);
     expect(() => validateEnv({ ...base, ODOO_URL: "ftp://x", ODOO_DB: "d", ODOO_USER: "u", ODOO_API_KEY_FILE: "/x" }, "app")).toThrow(/ODOO_URL/);

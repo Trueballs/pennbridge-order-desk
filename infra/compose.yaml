@@ -46,7 +46,9 @@ services:
     command: [npm, run, worker]
     depends_on:
       db: {condition: service_healthy}
-    environment: *app-env
+    environment:
+      <<: *app-env
+      PB_ROLE: worker
     volumes: [desk-storage:/app/runtime/storage]
     networks: [private]
     restart: unless-stopped

@@ -59,7 +59,8 @@ export function validateEnv(env: Env = process.env, role: Role = (env.PB_ROLE ==
   }
   // Optional direct Odoo push: all four settings or none. The API key is read from a secret file, never from the environment.
   if (["ODOO_URL", "ODOO_DB", "ODOO_USER", "ODOO_API_KEY_FILE"].some((k) => env[k])) {
-    for (const k of ["ODOO_URL", "ODOO_DB", "ODOO_USER", "ODOO_API_KEY_FILE"]) if (!env[k]) problems.push(`${k}: required when any ODOO_* push setting is set`);
+    // Only the worker holds the key; the app receives the non-secret settings to show the button.
+    for (const k of role === "worker" ? ["ODOO_URL", "ODOO_DB", "ODOO_USER", "ODOO_API_KEY_FILE"] : ["ODOO_URL", "ODOO_DB", "ODOO_USER"]) if (!env[k]) problems.push(`${k}: required when any ODOO_* push setting is set`);
     if (role === "worker" && env.ODOO_API_KEY_FILE && !existsSync(env.ODOO_API_KEY_FILE)) problems.push(`ODOO_API_KEY_FILE: file ${env.ODOO_API_KEY_FILE} not found`);
   }
   if (problems.length) throw new Error(`Invalid configuration:\n - ${problems.join("\n - ")}`);
