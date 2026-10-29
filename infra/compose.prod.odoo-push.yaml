@@ -1,0 +1,21 @@
+# Production overlay for direct Odoo push. Add to the prod compose: -f infra/compose.prod.yaml -f infra/compose.prod.odoo-push.yaml
+# Only the worker gets outbound network access (a normal bridge network) and the API key secret file; the app stays offline.
+# Set ODOO_URL (https://odoo.example.com), ODOO_DB, ODOO_USER in .env; put the Odoo API key in ${PB_SECRETS_DIR}/odoo_api_key.
+x-odoo-push: &odoo-push
+  ODOO_URL: ${ODOO_URL:?set ODOO_URL}
+  ODOO_DB: ${ODOO_DB:?set ODOO_DB}
+  ODOO_USER: ${ODOO_USER:?set ODOO_USER}
+services:
+  app:
+    environment: *odoo-push
+  worker:
+    environment:
+      <<: *odoo-push
+      ODOO_API_KEY_FILE: /run/secrets/odoo_api_key
+    secrets: [odoo_api_key]
+    networks: [private, odoo-egress]
+networks:
+  odoo-egress: {}
+secrets:
+  odoo_api_key:
+    file: ${PB_SECRETS_DIR:-../secrets}/odoo_api_key

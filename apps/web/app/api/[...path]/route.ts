@@ -107,6 +107,7 @@ async function handle(req:NextRequest,ctx:{params:Promise<{path:string[]}>}){
       if(parts[2]==='reprocess'&&method==='POST')return json(await services.reprocessOrder(user,id,ReprocessRequestSchema.parse(await req.json())));
       if(parts[2]==='lines'&&parts.length===3&&method==='POST')return json(await services.addLine(user,id,AddLineRequestSchema.parse(await req.json())));
       if(parts[2]==='lines'&&parts[4]==='remove'&&method==='POST')return json(await services.removeLine(user,id,parts[3],RemoveLineRequestSchema.parse(await req.json())));
+      if(parts[2]==='exports'&&parts[4]==='push-odoo'&&method==='POST'){await req.json().catch(()=>({}));return json(await services.queueOdooPush(user,id,parts[3]));}
       if(parts[2]==='exports'&&parts[4]==='void'&&method==='POST')return json(await services.voidExport(user,id,parts[3],VoidExportRequestSchema.parse(await req.json())));
       if(parts[2]==='approve'&&method==='POST')return json(await services.approveOrder(user,id,ApproveRequestSchema.parse(await req.json())));
       if(parts[2]==='export'&&method==='POST')return json(await services.exportOrder(user,id,ExportRequestSchema.parse(await req.json())));

@@ -172,10 +172,14 @@ export const ExportSnapshotSchema = z.object({
   customerExternalId: IdSchema, shippingAddressExternalId: IdSchema, poNumber: z.string(), currency: CurrencySchema,
   lines: z.array(ExportLineSchema).min(1), total: MoneySchema,
   mappingVersion: IdSchema, artifactHash: HashSchema, filename: z.string(),
-  state: z.enum(["prepared", "downloaded", "import_verified", "voided"]), preparedBy: IdSchema, preparedAt: TimestampSchema,
+  state: z.enum(["prepared", "downloaded", "push_queued", "pushed", "import_verified", "voided"]), preparedBy: IdSchema, preparedAt: TimestampSchema,
   downloadedAt: TimestampSchema.nullable(), verifiedAt: TimestampSchema.nullable(),
   verifiedBy: IdSchema.nullable(), quotationReference: z.string().nullable(),
   voidedAt: TimestampSchema.nullable().optional(), voidedBy: IdSchema.nullable().optional(), voidReason: z.string().nullable().optional(),
+  /** Direct Odoo push (optional alternative to CSV import). `pushed` counts as verified: quotationReference is the Odoo quotation name. */
+  pushState: z.enum(["queued", "failed", "succeeded"]).nullable().optional(), pushError: z.string().nullable().optional(),
+  pushRequestedBy: IdSchema.nullable().optional(), pushRequestedAt: TimestampSchema.nullable().optional(),
+  odooQuotation: z.object({ id: z.number().int().positive(), name: z.string(), url: z.string().nullable() }).strict().nullable().optional(),
 }).strict();
 export type ExportSnapshot = z.infer<typeof ExportSnapshotSchema>;
 
@@ -189,7 +193,7 @@ export const AuditEventSchema = z.object({
 }).strict();
 export type AuditEvent = z.infer<typeof AuditEventSchema>;
 export const JobSchema = z.object({
-  id: IdSchema, type: z.enum(["process_message", "revalidate_order", "catalogue_sync"]),
+  id: IdSchema, type: z.enum(["process_message", "revalidate_order", "catalogue_sync", "odoo_push"]),
   messageId: IdSchema.nullable(), orderId: IdSchema.nullable(),
   status: z.enum(["queued", "running", "retry_wait", "succeeded", "dead_letter"]),
   attempts: z.number().int().nonnegative(), maxAttempts: z.number().int().positive(),

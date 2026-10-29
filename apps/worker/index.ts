@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { budgetRunId, claimJob, heartbeatJob, pool, recordHeartbeat, runMaintenance, validateEnv } from "@pennbridge/db";
 import { purgeExpired } from "@pennbridge/server/auth";
-import { initialiseDatabase, processMessage, processingFailed } from "@pennbridge/server";
+import { initialiseDatabase, odooPushFailed, processMessage, processingFailed, runOdooPush } from "@pennbridge/server";
 import { parseInput } from "@pennbridge/ingestion";
 import { createProvider } from "@pennbridge/ai";
 
@@ -59,13 +59,14 @@ while(!stopping) {
   if(!job) { await maintain();await sleep(500);continue; }
   const heartbeat=setInterval(()=>{void heartbeatJob(job.id,owner).catch(()=>{/* commit checks lease */});},30000);
   try {
+    if(job.type==="odoo_push"){await runOdooPush(job,owner);log("job.completed",{jobId:job.id,type:job.type});continue;}
     if(job.type!=="process_message")throw new Error(`Unsupported job type: ${job.type}`);
     // The model budget is a calendar-month cap (Europe/London) unless a benchmark run id is forced.
     const provider=createProvider({runId:process.env.BENCHMARK_RUN_ID??budgetRunId(),orderId:job.orderId!});
     await processMessage(job,owner,{parse:parseInput,provider});
     log("job.completed",{jobId:job.id});
   } catch(error) {
-    try{await processingFailed(job,owner,error);}
+    try{await (job.type==="odoo_push"?odooPushFailed:processingFailed)(job,owner,error);}
     catch(inner){console.error(JSON.stringify({event:"job.fail_record_failed",jobId:job.id,message:(inner as Error).message}));}
     console.error(JSON.stringify({event:"job.failed",jobId:job.id,code:(error as {code?:string}).code??"PARSING_FAILED"}));
   } finally {clearInterval(heartbeat);}

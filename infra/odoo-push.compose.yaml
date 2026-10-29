@@ -1,0 +1,26 @@
+# Opt-in direct push of approved exports into Odoo as DRAFT quotations (see docs/ODOO-IMPORT.md "Direct push").
+# Compose WITH compose.yaml:  docker compose -f infra/compose.yaml -f infra/odoo-push.compose.yaml up -d app worker
+# Only the worker joins the Odoo ingress network and receives the API key (as a secret file, never an env var).
+# The app gets only the non-secret settings so it can offer the button; it stays offline.
+# Local Odoo proof stack: scripts/odoo_start.sh creates network pennbridge-odoo-proof_odoo-ingress; the nginx there is `odoo-web`.
+# Create runtime/odoo/odoo_api_key (git-ignored) with an Odoo API key (or, for the local demo only, the demo password).
+x-odoo-push: &odoo-push
+  ODOO_URL: ${ODOO_URL:-http://odoo-web}
+  ODOO_DB: ${ODOO_DB:-pennbridge}
+  ODOO_USER: ${ODOO_USER:?set ODOO_USER to the Odoo login that owns the API key}
+services:
+  app:
+    environment: *odoo-push
+  worker:
+    environment:
+      <<: *odoo-push
+      ODOO_API_KEY_FILE: /run/secrets/odoo_api_key
+    secrets: [odoo_api_key]
+    networks: [private, odoo-egress]
+networks:
+  odoo-egress:
+    external: true
+    name: ${ODOO_NETWORK:-pennbridge-odoo-proof_odoo-ingress}
+secrets:
+  odoo_api_key:
+    file: ../runtime/odoo/odoo_api_key

@@ -321,4 +321,17 @@ describe.skipIf(!enabled)("W2 order workflow on real PostgreSQL",()=>{
       expect(edited.order.pricingDate).toBe(d.order.pricingDate);
     });
   });
+  describe("match method on save",()=>{
+    it("lines whose product is unchanged keep their match method; a changed product becomes manual",async()=>{
+      const d=await orderOf((await receive({po:`MTH-${tag}`})).receipt);
+      const line=d.order.lines[0];expect(line.matchMethod).toBe("exact_sku");expect(line.productId).not.toBeNull();
+      const payload=(productId:string|null)=>d.order.lines.map(l=>({id:l.id,productId:l.id===line.id?productId:l.productId,quantity:l.quantity as string,unit:l.unit,quotedUnitPrice:l.quotedUnitPrice,description:l.description}));
+      const saved=await editOrder(reviewer,d.order.id,{expectedVersion:d.order.version,patch:{customerId:"C001",lines:payload(line.productId)}});
+      expect(saved.order.lines[0]).toMatchObject({productId:line.productId,matchMethod:"exact_sku"});
+      expect(saved.order.lines[0].candidates.length).toBeGreaterThan(0);
+      const other=(await listCatalogue(reviewer,{q:"washer"})).find(p=>p.id!==line.productId)!;
+      const changed=await editOrder(reviewer,d.order.id,{expectedVersion:saved.order.version,patch:{lines:payload(other.id)}});
+      expect(changed.order.lines[0]).toMatchObject({productId:other.id,matchMethod:"manual"});
+    });
+  });
 });

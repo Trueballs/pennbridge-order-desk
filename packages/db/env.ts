@@ -23,6 +23,10 @@ const schema = z.object({
   AI_RUN_BUDGET_USD: positive.optional(),
   AI_ORDER_BUDGET_USD: positive.optional(),
   SESSION_COOKIE_SECURE: z.enum(["true", "false"]).optional(),
+  ODOO_URL: z.string().url().regex(/^https?:\/\//, "must be http(s)").optional(),
+  ODOO_DB: z.string().min(1).optional(),
+  ODOO_USER: z.string().min(1).optional(),
+  ODOO_API_KEY_FILE: z.string().min(1).optional(),
 });
 export type Role = "app" | "worker";
 /** Throws one Error listing every problem so an operator can fix the .env in a single pass. */
@@ -52,6 +56,11 @@ export function validateEnv(env: Env = process.env, role: Role = (env.PB_ROLE ==
       const file = env[`${prefix}_API_KEY_FILE`];
       if (!env[`${prefix}_API_KEY`] && !(file && existsSync(file))) problems.push(`${prefix}_API_KEY or ${prefix}_API_KEY_FILE: live AI needs a key in the worker${file ? ` (file ${file} not found)` : ""}`);
     }
+  }
+  // Optional direct Odoo push: all four settings or none. The API key is read from a secret file, never from the environment.
+  if (["ODOO_URL", "ODOO_DB", "ODOO_USER", "ODOO_API_KEY_FILE"].some((k) => env[k])) {
+    for (const k of ["ODOO_URL", "ODOO_DB", "ODOO_USER", "ODOO_API_KEY_FILE"]) if (!env[k]) problems.push(`${k}: required when any ODOO_* push setting is set`);
+    if (role === "worker" && env.ODOO_API_KEY_FILE && !existsSync(env.ODOO_API_KEY_FILE)) problems.push(`ODOO_API_KEY_FILE: file ${env.ODOO_API_KEY_FILE} not found`);
   }
   if (problems.length) throw new Error(`Invalid configuration:\n - ${problems.join("\n - ")}`);
   if (!demo && !cookieSecure(env)) console.warn(JSON.stringify({ event: "config.warning", message: "SESSION_COOKIE_SECURE=false in production: session cookies will travel over plain HTTP" }));

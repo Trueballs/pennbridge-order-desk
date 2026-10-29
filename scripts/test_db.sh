@@ -14,6 +14,7 @@ PB_STATEFUL_DB="pb_${PB_TEST_RUN}_pennbridge_stateful_test"
 PB_WORKFLOW_DB="pb_${PB_TEST_RUN}_workflow_test"
 PB_ACCOUNTS_DB="pb_${PB_TEST_RUN}_accounts_test"
 PB_OPS_DB="pb_${PB_TEST_RUN}_ops_test"
+PB_ODOO_DB="pb_${PB_TEST_RUN}_odoo_push_test"
 PB_REPORTS="${PB_PROJECT_ROOT}/results/acceptance"
 PB_TEST_UID="$(id -u)"
 PB_TEST_GID="$(id -g)"
@@ -29,7 +30,7 @@ docker image inspect "$PB_TEST_IMAGE" >/dev/null
 mkdir -p "$PB_REPORTS"
 
 # CREATE DATABASE fails on a name collision. No pre-existing database is reset/deleted.
-for PB_DATABASE in "$PB_CORE_DB" "$PB_STATEFUL_DB" "$PB_WORKFLOW_DB" "$PB_ACCOUNTS_DB" "$PB_OPS_DB"; do
+for PB_DATABASE in "$PB_CORE_DB" "$PB_STATEFUL_DB" "$PB_WORKFLOW_DB" "$PB_ACCOUNTS_DB" "$PB_OPS_DB" "$PB_ODOO_DB"; do
   docker exec "$PB_TEST_DB_CONTAINER" createdb --username="$PB_TEST_DB_USER" "$PB_DATABASE"
 done
 printf 'Created isolated test databases: %s, %s, %s\n' "$PB_CORE_DB" "$PB_STATEFUL_DB" "$PB_WORKFLOW_DB"
@@ -59,5 +60,6 @@ pb_run_suite "$PB_STATEFUL_DB" STATEFUL_ACCEPTANCE_TEST tests/stateful-acceptanc
 pb_run_suite "$PB_WORKFLOW_DB" WORKFLOW_DB_TEST tests/workflow-db.test.ts 2>&1 | tee "${PB_REPORTS}/workflow.log"
 pb_run_suite "$PB_ACCOUNTS_DB" W3_DB_TEST tests/accounts-import.test.ts false 2>&1 | tee "${PB_REPORTS}/accounts-import.log"
 pb_run_suite "$PB_OPS_DB" OPS_DB_TEST tests/ops-db.test.ts false 2>&1 | tee "${PB_REPORTS}/ops.log"
+pb_run_suite "$PB_ODOO_DB" ODOO_PUSH_DB_TEST tests/odoo-push.test.ts 2>&1 | tee "${PB_REPORTS}/odoo-push.log"
 printf 'Passed: lifecycle, stateful acceptance, workflow, accounts/import and operations suites.\n'
 printf 'Reports: results/acceptance/db-lifecycle.log, stateful.log, stateful.json\n'

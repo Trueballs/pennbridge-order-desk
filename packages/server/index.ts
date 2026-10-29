@@ -7,6 +7,7 @@ import type { PoolClient } from "pg";
 import { authenticate, revokeToken, sessionFromToken } from "./auth"; // W3
 import { AddLineRequestSchema, AddressSchema, AssignCustomerRequestSchema, ExtractedOrderSchema, IntakeRequestSchema, OrderListQuerySchema, ReasonCodeSchema, RemoveLineRequestSchema, ReprocessRequestSchema, SenderMappingInputSchema, VerifyExportRequestSchema, VoidExportRequestSchema, type AddLineRequest, type Address, type AmendmentRequest, type AssignCustomerRequest, type DraftLine, type ExtractedLine, type ReasonCode, type RemoveLineRequest, type RemovedLine, type ReprocessRequest, type SenderMapping, type SenderMappingInput, type SuggestedCustomer, type VoidExportRequest, type ApproveRequest, type CancelRequest, type Customer, type Document, type DocumentEvidence, type EditOrderRequest, type ExportRequest, type ExportSnapshot, type ExtractedOrder, type ExtractionProvider, type IntakeRequest, type IntakeResponse, type Job, type HistoricalSuggestion, type OrderDetail, type OrderListQuery, type OrderListResponse, type Product, type Session, type SourceMessage, type Unit, type ValidatedDraft, type VerifyExportRequest } from "@pennbridge/contracts";
 import { audit, failJob, id, jobFromRow, migrate, pool, sha256, transaction, type DbClient } from "@pennbridge/db";
+import { queueOdooPush as queuePush, runOdooPush as runPush } from "./odoo";
 import { CATALOGUE_VERSION, currentCatalogueVersion, seedDatabase } from "@pennbridge/db/seed";
 import { authVerdict, canApprove, canonicalJson, classifyFailure, contentHash, anchorEvidence, hasUnresolved, isFreemailDomain, lineCoverage, londonDate, publicError as toPublicError, quantity, reason, senderParts, ServiceError, validate, type ValidationRepository } from "@pennbridge/domain";
 export { ServiceError } from "@pennbridge/domain";
@@ -198,7 +199,7 @@ export async function editOrder(actor:Session,orderId:string,input:EditOrderRequ
       if (!edited) return old;
       return {...old,quantity:edited.quantity,unit:edited.unit,quotedUnitPrice:edited.quotedUnitPrice,description:edited.description,productId:edited.productId};
     });
-    const selectedProducts=await selectedProductsFor(client,lines,new Set((patch.lines??[]).filter(l=>l.productId).map(l=>l.id)));
+    const selectedProducts=await selectedProductsFor(client,lines,new Set((patch.lines??[]).filter(l=>l.productId&&l.productId!==order.lines.find(o=>o.id===l.id)?.productId).map(l=>l.id))); // only a changed product is a manual choice; unchanged lines keep their match method
     const customerId=patch.customerId===undefined?order.customerId:patch.customerId;
     if (customerId && !(await client.query("SELECT 1 FROM customers WHERE id=$1",[customerId])).rowCount) throw new ServiceError("VALIDATION_FAILED","Unknown customer",400);
     const customerChanged=customerId!==order.customerId;
@@ -338,7 +339,8 @@ export async function exportOrder(actor:Session,orderId:string,input:ExportReque
     return snapshot;
   });
 }
-/** Export states: prepared -> downloaded -> import_verified; prepared|downloaded -> voided (frees the version for a fresh export). */
+/** Export states: prepared -> downloaded -> import_verified; prepared|downloaded -> voided (frees the version for a fresh export).
+ *  Direct Odoo push (./odoo.ts): prepared|downloaded -> push_queued -> pushed (terminal, counts as verified); a failed push returns to prepared|downloaded with pushState 'failed'. */
 export async function downloadExport(actor:Session,orderId:string,exportId:string):Promise<{filename:string;content:Buffer}> {
   mutate(actor);
   return transaction(async client=>{
@@ -351,17 +353,22 @@ export async function downloadExport(actor:Session,orderId:string,exportId:strin
     return {filename:snapshot.filename,content:row.artifact};
   });
 }
+/** Queue a direct push of this export into Odoo as a draft quotation; the worker does the network call. */
+export async function queueOdooPush(actor:Session,orderId:string,exportId:string):Promise<ExportSnapshot> { await initialiseDatabase(); return queuePush(actor,orderId,exportId); }
+export { odooPushFailed, odooPushConfigured } from "./odoo";
+export const runOdooPush=(job:Job,owner:string,opts?:Parameters<typeof runPush>[3])=>runPush(job,owner,unitMapping,opts);
 export async function verifyExport(actor:Session,orderId:string,exportId:string,input:VerifyExportRequest):Promise<ExportSnapshot> {
   mutate(actor);input=VerifyExportRequestSchema.parse(input);
   return transaction(async client=>{
     const row=(await client.query("SELECT data FROM exports WHERE id=$1 AND order_id=$2 FOR UPDATE",[exportId,orderId])).rows[0];
     if(!row) throw new ServiceError("NOT_FOUND","Export not found",404);
     const current:ExportSnapshot=row.data,reference=input.quotationReference.trim();
-    if(current.state==="import_verified") {
+    if(current.state==="import_verified"||current.state==="pushed") {
       if(current.quotationReference===reference) return current; // idempotent replay
       throw new ServiceError("VALIDATION_FAILED","This export was already verified with a different quotation reference",409);
     }
     if(current.state==="voided") throw new ServiceError("VALIDATION_FAILED","This export was voided",409);
+    if(current.state==="push_queued") throw new ServiceError("VALIDATION_FAILED","A direct push to Odoo is in progress; it records the quotation reference itself",409);
     if(current.state!=="downloaded") throw new ServiceError("VALIDATION_FAILED","Download the file and import it before verifying",409);
     const snapshot:ExportSnapshot={...current,state:"import_verified",verifiedAt:new Date().toISOString(),verifiedBy:actor.userId,quotationReference:reference};
     await client.query("UPDATE exports SET data=$2 WHERE id=$1",[exportId,snapshot]);await audit(client,orderId,actor,"export.import_verified",snapshot.orderVersion,{exportId,quotationReference:reference});return snapshot;
@@ -375,7 +382,8 @@ export async function voidExport(actor:Session,orderId:string,exportId:string,in
     if(!row) throw new ServiceError("NOT_FOUND","Export not found",404);
     const current:ExportSnapshot=row.data;
     if(current.state==="voided") return current;
-    if(current.state==="import_verified") throw new ServiceError("VALIDATION_FAILED","A verified import cannot be voided here; reverse it in the destination system",409);
+    if(current.state==="import_verified"||current.state==="pushed") throw new ServiceError("VALIDATION_FAILED","A verified import cannot be voided here; reverse it in the destination system",409);
+    if(current.state==="push_queued") throw new ServiceError("VALIDATION_FAILED","A push to Odoo is in progress; wait for it to finish or fail before voiding",409);
     const now=new Date().toISOString(),snapshot:ExportSnapshot={...current,state:"voided",voidedAt:now,voidedBy:actor.userId,voidReason:input.reason.trim()};
     await client.query("UPDATE exports SET data=$2 WHERE id=$1",[exportId,snapshot]);
     const order:ValidatedDraft|undefined=(await client.query("SELECT data FROM orders WHERE id=$1 FOR UPDATE",[orderId])).rows[0]?.data;
