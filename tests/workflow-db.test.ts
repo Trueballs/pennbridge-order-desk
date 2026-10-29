@@ -334,4 +334,13 @@ describe.skipIf(!enabled)("W2 order workflow on real PostgreSQL",()=>{
       expect(changed.order.lines[0]).toMatchObject({productId:other.id,matchMethod:"manual"});
     });
   });
+  it("the desk header follows the worker's heartbeat, not the app's env (the app holds no model key)",async()=>{
+    const { recordHeartbeat }=await import("../packages/db");
+    const { stats }=await import("../packages/server");
+    const actor:Session={userId:"admin",email:"admin@pennbridge.example",name:"Admin",role:"admin",expiresAt:new Date(Date.now()+3600e3).toISOString()};
+    await recordHeartbeat("worker",{owner,extraction:{mode:"live",provider:"gemini",model:"gemini-3.5-flash-lite"}});
+    expect(await stats(actor)).toMatchObject({mode:"live",provider:"gemini",model:"gemini-3.5-flash-lite"});
+    await recordHeartbeat("worker",{owner},new Date(Date.now()-10*60e3));
+    expect((await stats(actor)).mode).not.toBe("live");
+  });
 });

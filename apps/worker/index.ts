@@ -17,6 +17,8 @@ process.on("SIGTERM",()=>{stopping=true;});process.on("SIGINT",()=>{stopping=tru
 process.on("uncaughtException",(error)=>{console.error(JSON.stringify({event:"worker.fatal",message:error.message}));process.exit(1);});
 process.on("unhandledRejection",(error)=>{console.error(JSON.stringify({event:"worker.fatal",message:String((error as Error)?.message??error)}));process.exit(1);});
 
+// The app holds no model key, so the worker reports which extractor it really runs (shown in the desk header).
+const extraction=(()=>{const mode=createProvider({runId:"probe",orderId:"probe"}).mode;const live=mode==="live";return {mode,provider:live?(process.env.AI_PROVIDER==="gemini"?"gemini":"anthropic"):mode,model:live?process.env.EXTRACTION_MODEL||null:null};})();
 try{validateEnv();}catch(error){console.error(JSON.stringify({event:"worker.config_invalid",message:(error as Error).message}));process.exit(78);}
 for(let attempt=1;!stopping;attempt++){
   try{await initialiseDatabase();break;}
@@ -28,7 +30,7 @@ log("worker.started",{owner,mode:process.env.LIVE_AI_ENABLED==="true"?"live":"mo
 let beatFailing=false;
 const beat=async()=>{
   await writeFile(aliveFile,String(Date.now())).catch(()=>{});
-  try{await recordHeartbeat("worker",{owner});beatFailing=false;}catch(error){if(!beatFailing)console.error(JSON.stringify({event:"worker.heartbeat_failed",message:(error as Error).message}));beatFailing=true;}
+  try{await recordHeartbeat("worker",{owner,extraction});beatFailing=false;}catch(error){if(!beatFailing)console.error(JSON.stringify({event:"worker.heartbeat_failed",message:(error as Error).message}));beatFailing=true;}
 };
 // The mailbox container writes status.json/alert.json into its state volume (mounted read-only here); relay them into readiness.
 const mailboxDir=process.env.MAILBOX_STATE_DIR;

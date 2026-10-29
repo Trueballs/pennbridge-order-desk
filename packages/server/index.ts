@@ -442,9 +442,12 @@ export async function stats(actor:Session) {
   const [statuses,catalogue,jobs,usage]=await Promise.all([pool.query("SELECT status,count(*)::int AS count FROM orders GROUP BY status"),pool.query("SELECT count(*)::int AS count FROM products"),pool.query("SELECT count(*)::int AS count FROM jobs WHERE status IN ('queued','running','retry_wait')"),pool.query("SELECT data FROM model_usage")]);
   // live if configured; mock only in DEMO_MODE; otherwise reviewers enter orders manually.
   const live=process.env.LIVE_AI_ENABLED==="true"&&(process.env.AI_PROVIDER==="gemini"?!!(process.env.GEMINI_API_KEY||process.env.GEMINI_API_KEY_FILE):!!process.env.ANTHROPIC_API_KEY);
-  const mode:"live"|"mock"|"manual"=live?"live":process.env.DEMO_MODE==="true"?"mock":"manual";
+  let mode:"live"|"mock"|"manual"=live?"live":process.env.DEMO_MODE==="true"?"mock":"manual",provider:string=mode==="live"?(process.env.AI_PROVIDER==="gemini"?"gemini":"anthropic"):mode,model:string|null=mode==="live"?process.env.EXTRACTION_MODEL||null:null;
+  // Prefer what a live worker reports: only the worker holds the model key, so the app's own env can't tell.
+  const beat=(await pool.query("SELECT detail FROM service_heartbeats WHERE name='worker' AND beat_at>now()-interval '2 minutes'").catch(()=>({rows:[]as any[]}))).rows[0]?.detail?.extraction;
+  if(beat&&["live","mock","manual"].includes(beat.mode)){mode=beat.mode;provider=beat.provider;model=beat.model??null;}
   const counts=Object.fromEntries(statuses.rows.map(r=>[r.status,r.count]));
-  return {counts,totalOrders:statuses.rows.reduce((n,r)=>n+r.count,0),catalogueCount:catalogue.rows[0].count,pendingJobs:jobs.rows[0].count,mode,provider:mode==="live"?(process.env.AI_PROVIDER==="gemini"?"gemini":"anthropic"):mode,model:mode==="live"?process.env.EXTRACTION_MODEL||null:null,modelCalls:usage.rowCount??0,modelUsage:usage.rows.map(r=>r.data)};
+  return {counts,totalOrders:statuses.rows.reduce((n,r)=>n+r.count,0),catalogueCount:catalogue.rows[0].count,pendingJobs:jobs.rows[0].count,mode,provider,model,modelCalls:usage.rowCount??0,modelUsage:usage.rows.map(r=>r.data)};
 }
 export async function intake(actor:Session,input:IntakeRequest):Promise<IntakeResponse> {
   allow(actor,["reviewer","admin","ingestion"]);input=IntakeRequestSchema.parse(input);
