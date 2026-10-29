@@ -258,3 +258,13 @@ describe.skipIf(!enabled)("Odoo push: export state machine and worker on real Po
     } finally { for (const k of ["ODOO_URL", "ODOO_DB", "ODOO_USER", "ODOO_API_KEY_FILE"]) process.env[k] = saved[k]; }
   });
 });
+
+describe("quotation link", () => {
+  it("uses ODOO_PUBLIC_URL for reviewers' browsers when the worker reaches Odoo internally", async () => {
+    const { quotationUrl } = await import("../packages/server/odoo");
+    expect(quotationUrl({ url: "http://odoo-web" }, 9)).toBe("http://odoo-web/odoo/action-sale.action_quotations_with_onboarding/9");
+    process.env.ODOO_PUBLIC_URL = "http://127.0.0.1:8067/";
+    try { expect(quotationUrl({ url: "http://odoo-web" }, 9)).toBe("http://127.0.0.1:8067/odoo/action-sale.action_quotations_with_onboarding/9"); }
+    finally { delete process.env.ODOO_PUBLIC_URL; }
+  });
+});

@@ -138,7 +138,8 @@ async function findExisting(rpc: Rpc, input: PushInput, xmlid: string, marker: s
   const byOrigin: number[] = await rpc.execute("sale.order", "search", [[["origin", "=", marker]]], { limit: 1, order: "id" });
   return byOrigin[0] ?? null;
 }
-export const quotationUrl = (cfg: Pick<OdooConfig, "url">, quotationId: number) => `${cfg.url}/odoo/action-sale.action_quotations_with_onboarding/${quotationId}`;
+// ODOO_URL is how the worker reaches Odoo (may be an internal hostname); ODOO_PUBLIC_URL is what reviewers' browsers open.
+export const quotationUrl = (cfg: Pick<OdooConfig, "url">, quotationId: number) => `${(process.env.ODOO_PUBLIC_URL || cfg.url).replace(/\/+$/, "")}/odoo/action-sale.action_quotations_with_onboarding/${quotationId}`;
 
 // ---- Export state machine + job glue (DB only; no network here except through pushQuotation) ----------------------------------
 // prepared|downloaded --push-odoo--> push_queued --worker--> pushed (terminal, counts as verified: quotationReference = Odoo name)

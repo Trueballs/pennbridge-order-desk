@@ -6,6 +6,7 @@
 # Create runtime/odoo/odoo_api_key (git-ignored) with an Odoo API key (or, for the local demo only, the demo password).
 x-odoo-push: &odoo-push
   ODOO_URL: ${ODOO_URL:-http://odoo-web}
+  ODOO_PUBLIC_URL: ${ODOO_PUBLIC_URL:-http://127.0.0.1:8067}
   ODOO_DB: ${ODOO_DB:-pennbridge}
   ODOO_USER: ${ODOO_USER:?set ODOO_USER to the Odoo login that owns the API key}
 services:

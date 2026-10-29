@@ -27,6 +27,7 @@ const schema = z.object({
   ODOO_DB: z.string().min(1).optional(),
   ODOO_USER: z.string().min(1).optional(),
   ODOO_API_KEY_FILE: z.string().min(1).optional(),
+  ODOO_PUBLIC_URL: z.string().url().optional(),
 });
 export type Role = "app" | "worker";
 /** Throws one Error listing every problem so an operator can fix the .env in a single pass. */
