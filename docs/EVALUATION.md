@@ -198,7 +198,7 @@ The local Odoo UI is at <http://127.0.0.1:8067>. The proof imports and reimports
 
 ## Browser and destination smoke check
 
-The final local build was exercised in Chrome: reviewer sign-in, Mailpit sample injection, PDF/source preview, visible line-level price exceptions, reviewer notes, save, approval, CSV export, and manual destination verification. Selling quantities remained 2 packs / 6 each / 4 rolls through save and export. Odoo's real import service accepted that CSV in Test/Import/reimport, preserving record and line IDs; its resulting draft quotation S00007 was inspected in the browser at GBP61.40. The app's export history now records manual verification against S00007. Screenshots are in `results/screenshots/`.
+The final local build was exercised in Chrome: reviewer sign-in, Mailpit sample injection, PDF/source preview, visible line-level price exceptions, reviewer notes, save, approval, CSV export, and manual destination verification. Selling quantities remained 2 packs / 6 each / 4 rolls through save and export. Odoo's real import service accepted that CSV in Test/Import/reimport, preserving record and line IDs; its resulting draft quotation S00007 was inspected in the browser at GBP61.40. The app's export history now records manual verification against S00007. Screenshots are in `docs/evidence/`.
 
 The Chrome extension file chooser could not upload because file-URL permission was disabled. That browser upload path remains unverified; the actual Odoo import service was tested instead. No browser permission was changed. Build/typecheck pass; Next's dynamic-filesystem tracing warnings remain and should be addressed before optimizing a hosted image.
 

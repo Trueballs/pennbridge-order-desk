@@ -1,5 +1,7 @@
 {
 	admin off
+	# email / acme_ca / acme_ca_root from PB_ACME_* in .env, written by entrypoint.sh (empty when unset).
+	import /tmp/acme-options.conf
 }
 
 {$PB_DOMAIN} {

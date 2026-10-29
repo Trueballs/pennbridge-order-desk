@@ -29,7 +29,13 @@ def upsert_batch(model, records):
 unit_map = {'each':'uom.product_uom_unit','pack':'pennbridge.uom_pack','box':'pennbridge.uom_box','pair':'pennbridge.uom_pair','roll':'pennbridge.uom_roll','metre':'uom.product_uom_meter','litre':'uom.product_uom_litre','kg':'uom.product_uom_kgm'}
 # Packaging is the product's independent selling unit, never a generic conversion
 # to each: packs of 10 and packs of 100 cannot share a conversion factor.
-upsert_batch('uom.uom', [(unit_map[u], {'name':u.title() + ' (selling unit)', 'relative_factor':1, 'relative_uom_id':False}) for u in ['pack','box','pair','roll']])
+# Odoo 19 has no UoM categories (relative_factor/relative_uom_id). Odoo 17/18 require a category and a reference unit,
+# and a line unit must share the product unit's category, so each independent selling unit gets its own one-unit category.
+if 'relative_factor' in env['uom.uom']._fields:
+    upsert_batch('uom.uom', [(unit_map[u], {'name':u.title() + ' (selling unit)', 'relative_factor':1, 'relative_uom_id':False}) for u in ['pack','box','pair','roll']])
+else:
+    cats = upsert_batch('uom.category', [('pennbridge.uomcat_' + u, {'name':'Pennbridge ' + u + ' (selling unit)'}) for u in ['pack','box','pair','roll']])
+    upsert_batch('uom.uom', [(unit_map[u], {'name':u.title() + ' (selling unit)', 'category_id':cats['pennbridge.uomcat_' + u].id, 'uom_type':'reference', 'factor':1.0}) for u in ['pack','box','pair','roll']])
 units = {u:env.ref(x) for u,x in unit_map.items()}
 for unit in units.values(): unit.active = True
 catalogue, accounts, addresses, agreements = [read(n) for n in ['catalogue','accounts','addresses','price_agreements']]

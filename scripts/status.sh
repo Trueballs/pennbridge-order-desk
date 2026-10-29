@@ -3,11 +3,11 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_common.sh"
 code=0
-bad() { echo "PROBLEM: $*"; [[ ${code} -lt ${2:-1} ]] && code=${2:-1}; }
+bad() { echo "PROBLEM: $1"; [[ ${code} -lt ${2:-1} ]] && code=${2:-1}; }
 echo "== containers"; pb_compose ps
 for svc in db app worker proxy backup; do
   st="$(pb_compose ps --format '{{.State}}/{{.Health}}' "$svc" 2>/dev/null | head -n1)"
-  [[ "$st" == running/healthy || "$st" == running/ ]] || bad "$svc is $st" 2
+  [[ "$st" == running/healthy || "$st" == running/ ]] || bad "$svc is ${st:-not running}" 2
 done
 echo "== readiness"; out="$(pb_ready_json)"; rc=$?; echo "$out"
 [[ $rc -eq 0 ]] || bad "readiness endpoint says not ok" 2

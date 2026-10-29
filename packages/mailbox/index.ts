@@ -2,7 +2,10 @@ import { createHash, randomUUID } from 'node:crypto';
 import { copyFile, mkdir, open, readFile, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
+import { rootCertificates } from 'node:tls';
 import { ImapFlow } from 'imapflow';
+import { AUTH_MODES, TokenError, type TokenProvider } from './oauth';
+export * from './oauth';
 
 export const MAX_MESSAGE_BYTES = 10 * 1024 * 1024;
 export const MailboxConfigSchema = z.object({
@@ -18,7 +21,27 @@ export const MailboxConfigSchema = z.object({
   maxAttemptsPerMessage: z.number().int().min(1).max(50).default(5),
   /** Accepted messages per sender per hour; the rest are logged as skipped. 0 disables. */
   senderRateLimitPerHour: z.number().int().min(0).max(100000).default(30),
-}).strict();
+  /** How the receiver authenticates. `password` keeps the original app-password behaviour; see docs/MAILBOX-SETUP.md for the OAuth modes. */
+  authMode: z.enum(AUTH_MODES).default('password'),
+  /** oauth2-microsoft: Entra directory (tenant) id or verified domain. */
+  tenantId: z.string().regex(/^[A-Za-z0-9.-]{1,255}$/).optional(),
+  /** oauth2-microsoft / oauth2-refresh-token: application (client) id. */
+  clientId: z.string().min(1).max(512).regex(/^[^\s\x00-\x1f]+$/).optional(),
+  /** oauth2-microsoft: client secret (default) or certificate assertion. The secret/PEM lives in the credential file, never here. */
+  clientAuth: z.enum(['secret', 'certificate']).default('secret'),
+  /** Full https token endpoint. Required for oauth2-refresh-token; optional override elsewhere (sovereign clouds, tests). */
+  tokenEndpoint: z.string().max(1000).refine(v => { try { const u = new URL(v); return u.protocol === 'https:' && !u.username && !u.password; } catch { return false; } }, 'tokenEndpoint must be an https URL').optional(),
+  /** Override the requested scope (defaults: Microsoft https://outlook.office365.com/.default, Google https://mail.google.com/). */
+  scope: z.string().max(500).regex(/^[^\x00-\x1f]+$/).optional(),
+  /** oauth2-google: mailbox to impersonate via domain-wide delegation (defaults to `user`). */
+  impersonateUser: z.string().min(3).max(320).optional(),
+  /** Extra PEM CA bundle (path inside the container) trusted in ADDITION to the system roots for IMAP and token endpoints. Verification stays on. */
+  tlsCaFile: z.string().min(1).max(500).optional(),
+}).strict().superRefine((c, ctx) => {
+  const need = (ok: unknown, key: string, message: string) => { if (!ok) ctx.addIssue({ code: 'custom', path: [key], message }); };
+  if (c.authMode === 'oauth2-microsoft') { need(c.tenantId || c.tokenEndpoint, 'tenantId', 'oauth2-microsoft needs tenantId'); need(c.clientId, 'clientId', 'oauth2-microsoft needs clientId'); }
+  if (c.authMode === 'oauth2-refresh-token') { need(c.tokenEndpoint, 'tokenEndpoint', 'oauth2-refresh-token needs tokenEndpoint'); need(c.clientId, 'clientId', 'oauth2-refresh-token needs clientId'); }
+});
 export type MailboxConfig = z.infer<typeof MailboxConfigSchema>;
 const IdentitySchema = z.object({host:z.string(), user:z.string(), path:z.string()}).strict();
 const CheckpointSchema = z.object({identity:IdentitySchema, uidValidity:z.string().regex(/^\d+$/), lastUid:z.number().int().min(0).max(4294967295)}).strict();
@@ -53,7 +76,14 @@ export class ReceiverError extends Error {
   constructor(public readonly code:string) { super(code); }
 }
 /** Codes that mean "operator action needed" (credentials), never message-specific. */
-export const ALERT_CODES = new Set(['intake_unauthorized','imap_auth_failed']);
+/** imap_auth_failed = the mail server rejected the credentials/token ("auth_failed"); token_failed = no token could be obtained; consent_required = a person/admin must grant or re-grant access. */
+export const ALERT_CODES = new Set(['intake_unauthorized','imap_auth_failed','token_failed','consent_required']);
+const ALERT_MESSAGES:Record<string,string> = {
+  intake_unauthorized:'The desk rejected the receiver token (401/403). Mail is NOT being ingested. Rotate/restore runtime/mailbox/token and restart the app and receiver.',
+  imap_auth_failed:'The mail server rejected the mailbox credentials. Mail is NOT being ingested. Update the mailbox app password, or for OAuth check that the account/service principal still has access to the mailbox.',
+  token_failed:'No OAuth access token could be obtained (bad client secret/key, wrong tenant or endpoint, or the token service is unreachable). Mail is NOT being ingested. See docs/MAILBOX-SETUP.md.',
+  consent_required:'The mail provider requires consent or admin approval again (revoked refresh token, missing admin consent or domain-wide delegation). Mail is NOT being ingested. See docs/MAILBOX-SETUP.md.',
+};
 /** Failures caused by one message; only these count towards poison quarantine. Outages, 5xx and auth errors never do. */
 const POISON_CODES = new Set(['intake_rejected','message_unavailable','message_size_changed']);
 
@@ -165,7 +195,7 @@ export async function pollMailbox(config:MailboxConfig, mailbox:MailboxPort, sta
     return {ready:false,processed};
   } catch (error) {
     const code=safeErrorCode(error);
-    if (ALERT_CODES.has(code)) { log({event:'mailbox.alert',level:'error',code,message:code==='intake_unauthorized'?'The desk rejected the receiver token (401/403). Mail is NOT being ingested. Rotate/restore runtime/mailbox/token and restart the app and receiver.':'The mail server rejected the mailbox credentials. Mail is NOT being ingested. Update the mailbox app password.'}); await Promise.resolve(state.alert?.({code,at:nowIso()})).catch(()=>undefined); }
+    if (ALERT_CODES.has(code)) { log({event:'mailbox.alert',level:'error',code,message:ALERT_MESSAGES[code]}); await Promise.resolve(state.alert?.({code,at:nowIso()})).catch(()=>undefined); }
     throw error;
   } finally { await mailbox.close().catch(()=>undefined); }
 }
@@ -223,29 +253,50 @@ export function fileState(filename:string):StatePort {
   };
 }
 
-/** TLS + EXAMINE + PEEK fetching; never writes flags or mailbox contents. */
-export function imapMailbox(config:MailboxConfig,password:string):MailboxPort {
-  const client=new ImapFlow({host:config.host,port:config.port,secure:true,auth:{user:config.user,pass:password},
-    logger:false,logRaw:false,disableAutoIdle:true,disableCompression:true,
-    connectionTimeout:30000,greetingTimeout:15000,socketTimeout:60000,
-    maxLiteralSize:MAX_MESSAGE_BYTES,maxResponseSize:MAX_MESSAGE_BYTES+1024*1024,tls:{rejectUnauthorized:true}});
-  // Socket errors must never print provider strings (which may contain addresses).
-  client.on('error',()=>undefined);
+/** Password string (original behaviour) or an OAuth token provider. `extraCa` (PEM) is trusted in addition to the system roots; verification is never disabled. */
+export function imapMailbox(config:MailboxConfig,auth:string|TokenProvider,options:{extraCa?:string[]}={}):MailboxPort {
+  const tlsOptions=options.extraCa?.length?{rejectUnauthorized:true,ca:[...rootCertificates,...options.extraCa]}:{rejectUnauthorized:true};
+  const build=(credentials:{pass:string}|{accessToken:string})=>{
+    const created=new ImapFlow({host:config.host,port:config.port,secure:true,auth:{user:config.user,...credentials},
+      logger:false,logRaw:false,disableAutoIdle:true,disableCompression:true,
+      connectionTimeout:30000,greetingTimeout:15000,socketTimeout:60000,
+      maxLiteralSize:MAX_MESSAGE_BYTES,maxResponseSize:MAX_MESSAGE_BYTES+1024*1024,tls:tlsOptions});
+    // Socket errors must never print provider strings (which may contain addresses).
+    created.on('error',()=>undefined);
+    return created;
+  };
+  let client:ImapFlow|undefined=typeof auth==='string'?build({pass:auth}):undefined;
+  const connected=()=>client!;
+  const isAuthFailure=(error:unknown)=>!!(error as {authenticationFailed?:boolean}).authenticationFailed;
   return {
     async open() {
-      try {await client.connect();} catch(error) {if ((error as {authenticationFailed?:boolean}).authenticationFailed) throw new ReceiverError('imap_auth_failed'); throw error;}
-      const box=await client.mailboxOpen(config.mailbox,{readOnly:true});return {uidValidity:String(box.uidValidity),uidNext:box.uidNext};},
-    async firstUidSince(date) {const found=await client.search({since:new Date(`${date}T00:00:00Z`)},{uid:true}); return found&&found.length?Math.min(...found):null;},
+      if (typeof auth!=='string') {
+        // A token the server rejects (revoked, rotated key) is retried once with a freshly issued one before alerting.
+        for (let attempt=0;;attempt++) {
+          const token=await auth.getToken();
+          client=build({accessToken:token});
+          try {await client.connect();break;}
+          catch(error) {
+            client.close(); auth.invalidate();
+            if (!isAuthFailure(error)) throw error;
+            if (attempt>=1) throw new ReceiverError('imap_auth_failed');
+          }
+        }
+      } else {
+        try {await connected().connect();} catch(error) {if (isAuthFailure(error)) throw new ReceiverError('imap_auth_failed'); throw error;}
+      }
+      const box=await connected().mailboxOpen(config.mailbox,{readOnly:true});return {uidValidity:String(box.uidValidity),uidNext:box.uidNext};},
+    async firstUidSince(date) {const found=await connected().search({since:new Date(`${date}T00:00:00Z`)},{uid:true}); return found&&found.length?Math.min(...found):null;},
     async list(afterUid,limit,beforeUid) {
       if (afterUid>=beforeUid-1) return [];
-      const found=await client.search({uid:`${afterUid+1}:${beforeUid-1}`},{uid:true});
+      const found=await connected().search({uid:`${afterUid+1}:${beforeUid-1}`},{uid:true});
       const uids=(found||[]).filter(uid=>uid>afterUid&&uid<beforeUid).sort((a,b)=>a-b).slice(0,limit);
       if (!uids.length) return [];
-      const messages=await client.fetchAll(uids.join(','),{uid:true,size:true,envelope:true,headers:AUTOMATION_HEADERS},{uid:true});
+      const messages=await connected().fetchAll(uids.join(','),{uid:true,size:true,envelope:true,headers:AUTOMATION_HEADERS},{uid:true});
       return messages.map(message=>({uid:message.uid,size:message.size ?? -1,subject:message.envelope?.subject||'',from:message.envelope?.from?.[0]?.address?.toLowerCase(),headers:parseHeaderBlock(message.headers)}));
     },
-    async raw(uid) {const message=await client.fetchOne(String(uid),{source:true},{uid:true}); if (!message||!message.source) throw new ReceiverError('message_unavailable');return message.source;},
-    async close() {try {await client.logout();} finally {client.close();}},
+    async raw(uid) {const message=await connected().fetchOne(String(uid),{source:true},{uid:true}); if (!message||!message.source) throw new ReceiverError('message_unavailable');return message.source;},
+    async close() {if (!client) return; try {await client.logout();} finally {client.close();}},
   };
 }
 
@@ -260,5 +311,5 @@ export function httpIntake(token:string, endpoint='http://app:3087/api/intake', 
     throw new ReceiverError('intake_not_accepted');
   };
 }
-export function safeErrorCode(error:unknown) {return error instanceof ReceiverError?error.code:'mailbox_poll_failed';}
+export function safeErrorCode(error:unknown) {return error instanceof ReceiverError||error instanceof TokenError?error.code:'mailbox_poll_failed';}
 export function retryDelaySeconds(interval:number, failures:number) {return Math.min(900,interval*2**Math.min(failures,10));}

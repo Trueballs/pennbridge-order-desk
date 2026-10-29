@@ -15,6 +15,8 @@ services:
     logging: {driver: json-file, options: {max-size: 10m, max-file: '5'}}
     environment:
       MAILBOX_CONFIG_FILE: /run/mailbox/config.json
+      # Despite its name this file holds whatever authMode in config.json needs (app password, OAuth client secret, key/refresh-token JSON).
+      # A private CA for IMAP/token endpoints: set tlsCaFile in config.json and mount the PEM read-only (see docs/MAILBOX-SETUP.md).
       MAILBOX_PASSWORD_FILE: /run/secrets/mailbox_password
       MAILBOX_TOKEN_FILE: /run/secrets/mailbox_token
       MAILBOX_STATE_FILE: /app/runtime/mailbox-state/checkpoint.json

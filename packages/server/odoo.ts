@@ -32,7 +32,10 @@ export function odooConfigFromEnv(env: Env = process.env): OdooConfig {
 type FetchLike = (url: string, init: { method: string; headers: Record<string, string>; body: string; signal: AbortSignal }) => Promise<{ status: number; ok: boolean; text(): Promise<string> }>;
 export interface PushOptions { fetch?: FetchLike; timeoutMs?: number }
 export type PushInput = Pick<ExportSnapshot, "orderId" | "orderVersion" | "externalId" | "customerExternalId" | "shippingAddressExternalId" | "poNumber" | "currency" | "lines" | "total">;
-export interface PushResult { id: number; name: string; state: string; created: boolean; amountUntaxed: string | null; totalMatches: boolean | null }
+/** `serverVersion`/`serverMajor` come from common.version (null if an Odoo build does not answer it); they pick the quotation link format. */
+export interface PushResult { id: number; name: string; state: string; created: boolean; amountUntaxed: string | null; totalMatches: boolean | null; serverVersion: string | null; serverMajor: number | null }
+/** The line-unit field is `product_uom_id` from Odoo 19 and `product_uom` in 17/18. */
+export type UomField = "product_uom_id" | "product_uom";
 
 const NETWORK_CODES = new Set(["ECONNRESET", "ETIMEDOUT", "ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN", "EPIPE", "UND_ERR_CONNECT_TIMEOUT", "UND_ERR_SOCKET", "UND_ERR_HEADERS_TIMEOUT"]);
 class Rpc {
@@ -95,12 +98,28 @@ async function resolve(rpc: Rpc, wanted: Record<string, string>): Promise<Record
   return Object.fromEntries(ids.map((x) => [x, found.get(x)!.res_id]));
 }
 
+/** Server version (common.version, no auth needed) and the sale.order.line unit field, detected from fields_get so it works on any build. */
+async function detectServer(rpc: Rpc): Promise<{ serverVersion: string | null; serverMajor: number | null; uomField: UomField }> {
+  let serverVersion: string | null = null, serverMajor: number | null = null;
+  try {
+    const v = await rpc.call("common", "version", []);
+    serverVersion = typeof v?.server_version === "string" ? v.server_version : null;
+    const major = Array.isArray(v?.server_version_info) ? Number(v.server_version_info[0]) : NaN;
+    serverMajor = Number.isInteger(major) ? major : null;
+  } catch (error) { if (error instanceof OdooPushError && error.retryable) throw error; /* version is informational; fall back to the default link format */ }
+  const fields: Record<string, unknown> = await rpc.execute("sale.order.line", "fields_get", [["product_uom_id", "product_uom"]], { attributes: ["type"] });
+  const uomField: UomField | null = fields && "product_uom_id" in fields ? "product_uom_id" : fields && "product_uom" in fields ? "product_uom" : null;
+  if (!uomField) throw new OdooPushError("rejected", "This Odoo version has no recognised sale order line unit field; it is not supported by the direct push.", "fields_get: neither product_uom_id nor product_uom");
+  return { serverVersion, serverMajor, uomField };
+}
+
 /** Idempotent: a second call for the same order version returns the same quotation without creating another. */
 export async function pushQuotation(cfg: OdooConfig, input: PushInput, unitMapping: Partial<Record<string, string>>, opts: PushOptions = {}): Promise<PushResult> {
   const rpc = new Rpc(cfg, opts);
   const uid = await rpc.call("common", "authenticate", [cfg.db, cfg.user, cfg.apiKey, {}]);
   if (!uid) throw new OdooPushError("auth", "Odoo refused the configured login or API key; ask an administrator to check the Odoo credentials.", "authenticate returned false");
   rpc.uid = uid;
+  const server = await detectServer(rpc);
   const xmlid = pushExternalId(input), marker = `pennbridge:${quoteName(input)}`;
   const units = new Map<string, string>();
   for (const line of input.lines) { const u = unitMapping[line.unit]; if (!u) throw new OdooPushError("rejected", `No Odoo unit mapping is configured for "${line.unit}".`, line.unit); units.set(line.unit, u); }
@@ -113,7 +132,7 @@ export async function pushQuotation(cfg: OdooConfig, input: PushInput, unitMappi
     for (const u of units.values()) wanted[u] = "uom.uom";
     const ref = await resolve(rpc, wanted);
     const vals = { partner_id: ref[input.customerExternalId], partner_shipping_id: ref[input.shippingAddressExternalId], client_order_ref: input.poNumber, currency_id: ref[`base.${input.currency}`], origin: marker,
-      order_line: input.lines.map((l) => [0, 0, { product_id: ref[l.productExternalId], name: l.description, product_uom_qty: Number(l.quantity), product_uom_id: ref[units.get(l.unit)!], price_unit: Number(l.unitPrice) }]) };
+      order_line: input.lines.map((l) => [0, 0, { product_id: ref[l.productExternalId], name: l.description, product_uom_qty: Number(l.quantity), [server.uomField]: ref[units.get(l.unit)!], price_unit: Number(l.unitPrice) }]) };
     const made = await rpc.execute("sale.order", "create", [vals]);
     quotationId = Array.isArray(made) ? made[0] : made; created = true;
   }
@@ -126,7 +145,7 @@ export async function pushQuotation(cfg: OdooConfig, input: PushInput, unitMappi
   const [row] = await rpc.execute("sale.order", "read", [[quotationId]], { fields: ["name", "state", "amount_untaxed"] });
   if (!row) throw new OdooPushError("transient", "The quotation could not be read back from Odoo; the push will be retried.", `read ${quotationId} empty`);
   const untaxed = row.amount_untaxed === undefined || row.amount_untaxed === null ? null : new Decimal(String(row.amount_untaxed)).toFixed(2);
-  return { id: quotationId, name: row.name, state: row.state, created, amountUntaxed: untaxed, totalMatches: untaxed === null ? null : new Decimal(untaxed).eq(new Decimal(input.total)) };
+  return { id: quotationId, name: row.name, state: row.state, created, amountUntaxed: untaxed, totalMatches: untaxed === null ? null : new Decimal(untaxed).eq(new Decimal(input.total)), serverVersion: server.serverVersion, serverMajor: server.serverMajor };
 }
 /** Looks for an earlier push (this version's external id), a CSV import of the same export (its external id), then the origin marker. */
 async function findExisting(rpc: Rpc, input: PushInput, xmlid: string, marker: string): Promise<number | null> {
@@ -139,7 +158,11 @@ async function findExisting(rpc: Rpc, input: PushInput, xmlid: string, marker: s
   return byOrigin[0] ?? null;
 }
 // ODOO_URL is how the worker reaches Odoo (may be an internal hostname); ODOO_PUBLIC_URL is what reviewers' browsers open.
-export const quotationUrl = (cfg: Pick<OdooConfig, "url">, quotationId: number) => `${(process.env.ODOO_PUBLIC_URL || cfg.url).replace(/\/+$/, "")}/odoo/action-sale.action_quotations_with_onboarding/${quotationId}`;
+/** Odoo 17 has no /odoo router (it came with 17.2+/18); there the classic /web#... form link is the one that works. */
+export const quotationUrl = (cfg: Pick<OdooConfig, "url">, quotationId: number, serverMajor: number | null = null) => {
+  const base = (process.env.ODOO_PUBLIC_URL || cfg.url).replace(/\/+$/, "");
+  return serverMajor !== null && serverMajor < 18 ? `${base}/web#id=${quotationId}&model=sale.order&view_type=form` : `${base}/odoo/action-sale.action_quotations_with_onboarding/${quotationId}`;
+};
 
 // ---- Export state machine + job glue (DB only; no network here except through pushQuotation) ----------------------------------
 // prepared|downloaded --push-odoo--> push_queued --worker--> pushed (terminal, counts as verified: quotationReference = Odoo name)
@@ -186,11 +209,11 @@ export async function runOdooPush(job: Job, owner: string, unitMapping: Partial<
     // The Odoo record exists whatever happens here; record it even if the lease was lost so a retry only re-adopts it.
     if (current.state === "push_queued") {
       const pushed: ExportSnapshot = { ...current, state: "pushed", pushState: "succeeded", pushError: null, verifiedAt: new Date().toISOString(), verifiedBy: current.pushRequestedBy ?? null,
-        quotationReference: result.name, odooQuotation: { id: result.id, name: result.name, url: quotationUrl(cfg, result.id) } };
+        quotationReference: result.name, odooQuotation: { id: result.id, name: result.name, url: quotationUrl(cfg, result.id, result.serverMajor) } };
       await client.query("UPDATE exports SET data=$2 WHERE id=$1", [exportId, pushed]);
     }
     if (lease) await client.query("UPDATE jobs SET status='succeeded',lease_owner=NULL,lease_expires_at=NULL,error_code=NULL,error_message=NULL,updated_at=now() WHERE id=$1", [job.id]);
-    await audit(client, job.orderId, owner, "export.pushed", current.orderVersion, { exportId: exportId!, quotationId: result.id, quotationReference: result.name, created: result.created, state: result.state, amountUntaxed: result.amountUntaxed, totalMatches: result.totalMatches, jobId: job.id });
+    await audit(client, job.orderId, owner, "export.pushed", current.orderVersion, { exportId: exportId!, quotationId: result.id, quotationReference: result.name, created: result.created, serverVersion: result.serverVersion, state: result.state, amountUntaxed: result.amountUntaxed, totalMatches: result.totalMatches, jobId: job.id });
   });
 }
 export async function odooPushFailed(job: Job, owner: string, error: unknown): Promise<void> {
@@ -212,3 +235,10 @@ export async function odooPushFailed(job: Job, owner: string, error: unknown): P
     await audit(client, job.orderId, owner, final ? "export.push_failed" : "export.push_retry", current.orderVersion, { exportId: j.export_id, kind: known ? error.kind : "unexpected", retryable, attempt: j.attempts, jobId: job.id });
   });
 }
+
+/**
+ * The desk's CSV (renderOdooCsv) uses the Odoo 19 header `order_line/product_uom_id/id`. Odoo 17/18 call that line field
+ * `product_uom`; rename the header column for those servers (data rows are unchanged). Pass the major from common.version.
+ */
+export const odooCsvForVersion = (csv: string, serverMajor: number): string =>
+  serverMajor >= 19 ? csv : csv.replace(/^[^\n]*/, (header) => header.replace("order_line/product_uom_id/id", "order_line/product_uom/id"));

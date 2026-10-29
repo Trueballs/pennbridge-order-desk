@@ -254,7 +254,7 @@ In the demo, nothing: no model is called and `LIVE_AI_ENABLED=false`. In live mo
 - Complete extraction of long PDFs. The row-count guard counts tabular rows only. Omitted lines in prose orders are left to the reviewer (see Q9).
 - The Anthropic live path. No run is recorded.
 - Scanned PDFs and OCR.
-- On a real server: Let's Encrypt issuance on a public domain, `install.sh` on Ubuntu, Microsoft 365 / OAuth mailboxes (IMAP with an app password only), minimal permissions for the Odoo integration user, and Odoo versions other than 19. See the Known limits section in the README.
+- On a real server or tenant: Let's Encrypt on a real public domain (only Pebble, the official test CA, was exercised), a real VM or cloud server (the Ubuntu 24.04 install was verified on a simulated server, 38/38), a real Microsoft 365 tenant, Google Workspace domain-wide delegation, Odoo Online/Enterprise, and a non-admin Odoo integration user. Verified: Odoo 17, 18 and 19, and mailbox OAuth2 (mock identity provider against real Dovecot, plus a real Gmail OAuth2 run). See the Known limits section in the README.
 - Performance beyond one local sample and beyond one server.
 
 **6. How do I change a business rule?**
@@ -303,11 +303,11 @@ Done and checked:
 - A live run on 2026-10-29: a real Gmail order from a trusted sender became an Odoo draft quotation after human approval.
 
 Not verified:
-- Let's Encrypt on a real public domain. Only Caddy's internal CA was tested.
-- `install.sh` on a real Ubuntu server. The test ran on macOS with Docker installation skipped.
-- Microsoft 365 or OAuth mailboxes. Only IMAP with an app password was tested.
-- Minimal permissions for the Odoo integration user, and Odoo versions other than 19.
-- Offsite backups, high availability and sustained load are not provided or not tested.
+- Let's Encrypt on a real public domain (no public DNS). Issuance and renewal were verified against Pebble, the official test CA; the docs give a staging-first procedure.
+- A real VM or cloud server (firewall, cloud networking). `install.sh` was verified on a simulated Ubuntu 24.04 server (`scripts/test_install_ubuntu.sh`, 38/38), including restore, upgrade, rollback and reboot recovery.
+- A real Microsoft 365 tenant and Google Workspace domain-wide delegation. Mailbox OAuth2 was verified against real Dovecot with a mock identity provider (35/35) and with a real Gmail OAuth2 refresh-token run on 2026-10-29. Google "Testing" apps' refresh tokens expire after 7 days.
+- Odoo Online/Enterprise and a non-admin Odoo integration user. Odoo 17, 18 and 19 were verified.
+- Offsite backups, high availability and load testing are not provided or not tested.
 
 Say: "It is ready for a pilot with a person checking every draft. It is not yet tested on a real server, or with a real customer's mail and ERP."
 
@@ -336,11 +336,11 @@ Say: "When the model fails, the desk does not guess. The order waits for a perso
 ## 6. Honest limitations
 
 - **Mock mode by default in the demo.** The default extraction in the demo is a deterministic rule-based parser. Live Gemini extraction is off unless explicitly enabled and configured. On the held-out set, gemini-3.5-flash-lite got 25 of 30 emails and 6 of 6 PDFs fully right in one run. Development-set numbers (37 of 42 emails, 18 of 20 PDFs, tuned on) are secondary. See [EVALUATION](EVALUATION.md#held-out-results).
-- **Local demo, and one server in production.** The demo runs with Docker Compose on this machine, bound to localhost. The production path (see [OPERATIONS.md](OPERATIONS.md)) is one Linux server with HTTPS. It is not verified on a real server with a public domain, and there is no high availability.
+- **Local demo, and one server in production.** The demo runs with Docker Compose on this machine, bound to localhost. The production path (see [OPERATIONS.md](OPERATIONS.md)) is one Linux server with HTTPS. The install was verified on a simulated Ubuntu 24.04 server, but not on a real cloud server with a public domain, and there is no high availability.
 - **Synthetic data only.** Fictional customers, products and prices. The held-out set was written separately from the prompt and never used for tuning, but it is still synthetic and small (36 cases). Results are not production accuracy.
 - **Sender identity is only partly proven.** A trusted mapping needs a passing SPF, DKIM and DMARC result at the receiving server. Other mail stays a suggestion that a person confirms.
 - **Live mode sends email text to Google.** Use synthetic orders only while it is on.
-- **Odoo has two routes.** The push creates draft quotations over JSON-RPC, and was verified on Odoo 19 only. The CSV import is still manual. Browser CSV upload was not verified; the import itself was verified through Odoo's import service.
-- **Mailbox is a local poller in the demo.** A dedicated Gmail test inbox is connected over IMAP and was verified end to end on 2026-10-28 and 2026-10-29. Microsoft 365 / OAuth mailboxes were not tested. It polls every 60 seconds.
+- **Odoo has two routes.** The push creates draft quotations over JSON-RPC, and was verified on Odoo 17, 18 and 19 (not Odoo Online/Enterprise). The CSV import is still manual. Browser CSV upload was not verified; the import itself was verified through Odoo's import service.
+- **Mailbox is a local poller in the demo.** A dedicated Gmail test inbox is connected over IMAP and was verified end to end on 2026-10-28 and 2026-10-29. OAuth2 mailboxes were verified with a mock identity provider and one real Gmail OAuth2 run (2026-10-29); a real Microsoft 365 tenant and Google Workspace delegation were not tested. It polls every 60 seconds.
 - **PDFs only machine-generated.** Scanned PDFs and OCR are not supported.
 - **Current counts** (from `docs/EVALUATION.md`): 42 email cases stateless, 8 stateful cases with PostgreSQL, 20 PDF cases with 286 labelled lines (offline mock mode, development fixtures). Live held-out: 36 cases (30 email, 6 PDF, 133 lines), one run per model. Reported on 2026-10-29: 101 unit tests, 84 database tests (6 suites), 9 browser tests.

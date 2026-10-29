@@ -20,6 +20,6 @@ export default defineConfig({
   testDir: "tests/e2e", testMatch: "**/*.spec.ts", timeout: 60_000, expect: { timeout: 10_000 }, workers: 1, fullyParallel: false, retries: 0,
   reporter: [["list"]], globalSetup: "./tests/e2e/global-setup.ts",
   use: { baseURL: `http://127.0.0.1:${E2E_PORT}`, trace: "retain-on-failure", screenshot: "only-on-failure", viewport: { width: 1280, height: 900 }, launchOptions: { executablePath } },
-  outputDir: "results/e2e",
+  outputDir: "test-results/e2e",
   webServer: databaseUrl ? { command: `npx next dev apps/web --hostname 127.0.0.1 --port ${E2E_PORT}`, url: `http://127.0.0.1:${E2E_PORT}/api/health`, reuseExistingServer: false, timeout: 120_000, env: e2eEnv, stdout: "ignore", stderr: "pipe" } : undefined,
 });

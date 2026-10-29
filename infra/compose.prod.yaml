@@ -88,13 +88,18 @@ services:
     cap_add: [NET_BIND_SERVICE]
     depends_on:
       app: {condition: service_healthy}
+    entrypoint: [/bin/sh, /entrypoint.sh]
     environment:
       PB_DOMAIN: ${PB_DOMAIN:?run scripts/install.sh to generate .env}
       PB_TLS_MODE: ${PB_TLS_MODE:-auto}
+      PB_ACME_EMAIL: ${PB_ACME_EMAIL:-}
+      PB_ACME_CA: ${PB_ACME_CA:-}
+      PB_ACME_CA_ROOT: ${PB_ACME_CA_ROOT:-}
     ports:
       - '${PB_BIND:-0.0.0.0}:${PB_HTTP_PORT:-80}:80'
       - '${PB_BIND:-0.0.0.0}:${PB_HTTPS_PORT:-443}:443'
     volumes:
+      - ./caddy/entrypoint.sh:/entrypoint.sh:ro
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./caddy/tls-auto.conf:/etc/caddy/tls-auto.conf:ro
       - ./caddy/tls-internal.conf:/etc/caddy/tls-internal.conf:ro

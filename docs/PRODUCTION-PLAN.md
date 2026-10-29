@@ -6,13 +6,19 @@ Current status. The work sections below are the plan as written on 2026-10-28; t
 
 - **Wave 1 (ops, infra, database): done.** Install script, production Compose with Caddy HTTPS, restart policies and healthchecks, readiness endpoint, env validation, migration runner, backup/restore/upgrade scripts, monthly AI budget, security headers, GitHub Actions CI. See [OPERATIONS.md](OPERATIONS.md).
 - **Wave 2 (order workflow, admin UI, Odoo push, E2E): done.** Sender mappings with SPF/DKIM/DMARC gating, manual path (add/remove line, reprocess, manual entry), search and paging, accounts and CSV import, direct Odoo push of approved orders, 9 Playwright browser tests, live Gmail end-to-end run (2026-10-29).
-- **Not yet verified:**
-  - Let's Encrypt issuance on a real public domain (only Caddy's internal CA tested)
-  - `scripts/install.sh` on a real Ubuntu server (macOS test, Docker install skipped)
-  - Microsoft 365 / OAuth mailboxes (IMAP with app password only)
-  - Minimal permissions for the Odoo integration user
-  - Odoo versions other than 19
-  - Offsite backup copies (not provided), high availability and sustained load (not tested)
+- **Verified since (2026-10-29):**
+  - Fresh Ubuntu 24.04 install on a simulated server (privileged container with systemd; Docker installed from Ubuntu repos): HTTPS, admin bootstrap, import, backup, verified and real restore, upgrade and rollback, reboot recovery. `scripts/test_install_ubuntu.sh`, 38/38.
+  - ACME issuance and renewal via Pebble, Let's Encrypt's test CA (http-01 and tls-alpn-01): `scripts/test_acme.sh`.
+  - Odoo 17, 18 and 19: CSV import and direct push per version (`scripts/odoo_version_proof.sh`).
+  - Mailbox OAuth2 against a real Dovecot with a mock identity provider (Microsoft client credentials with secret and certificate, Google service-account JWT, refresh token): `scripts/test_mailbox_oauth.sh`, 35/35. Real Gmail OAuth2 run on 2026-10-29: order E2E-08 arrived, auto-assigned, total GBP 35.40. See [MAILBOX-SETUP.md](MAILBOX-SETUP.md).
+  - 9 Playwright browser tests re-run against the current tree: 9/9.
+- **Still not verified:**
+  - A real Microsoft 365 tenant (Entra app permission, Exchange service principal)
+  - Google Workspace domain-wide delegation with a real service account (Google "Testing" apps' refresh tokens expire after 7 days; renewal is documented)
+  - Let's Encrypt on a real public domain (no public DNS; staging-first procedure documented)
+  - A real VM or cloud server (firewall, cloud networking)
+  - Odoo Online / Enterprise, and a non-admin Odoo integration user
+  - Offsite backup copies (not provided), high availability and load testing
 
 ## Plan (2026-10-28)
 

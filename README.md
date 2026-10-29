@@ -31,22 +31,32 @@ Built for one Linux server. What was and was not exercised is listed in [docs/OP
 
 ## Known limits
 
-Not verified yet:
+Verified (2026-10-29):
 
-- Let's Encrypt certificates on a real public domain. Only Caddy's internal CA has been tested.
-- `scripts/install.sh` on a real Ubuntu server. The test ran on macOS with Docker installation skipped.
-- Microsoft 365 or other OAuth mailboxes. Only IMAP with an app password has been tested.
-- Minimal permissions for the Odoo integration user.
-- Odoo versions other than 19.
+- A fresh Ubuntu 24.04 install on a simulated server (privileged container with systemd; `install.sh` installed Docker from the Ubuntu repos): HTTPS, admin bootstrap, import, backup, verified and real restore, upgrade and rollback, reboot recovery. `scripts/test_install_ubuntu.sh`, 38/38.
+- ACME certificate issuance and renewal against Pebble, Let's Encrypt's official test CA (http-01 and tls-alpn-01): `scripts/test_acme.sh`.
+- Odoo 17, 18 and 19: CSV import and direct push, per version (`docs/ODOO-IMPORT.md`, `scripts/odoo_version_proof.sh`).
+- Mailbox OAuth2 (XOAUTH2/OAUTHBEARER) against a real Dovecot with a mock identity provider, for Microsoft client credentials (secret and certificate), Google service-account JWT and refresh-token modes: `scripts/test_mailbox_oauth.sh`, 35/35. A real Gmail OAuth2 run also worked: the receiver used a refresh token, logged in to imap.gmail.com, and test order E2E-08 arrived and was auto-assigned. Setup: [docs/MAILBOX-SETUP.md](docs/MAILBOX-SETUP.md).
 
-Also not covered: offsite backup copies (backups stay on the server's disk unless you copy them), high availability, sustained load, scanned PDFs, and accuracy on real customer orders. The held-out set is 36 synthetic cases.
+Still not verified:
+
+- A real Microsoft 365 tenant (Entra app permission plus Exchange service principal).
+- Google Workspace domain-wide delegation with a real service account.
+- Let's Encrypt on a real public domain (no public DNS was available). The docs give a staging-first procedure.
+- A real VM or cloud server (firewall, cloud networking). The Ubuntu test used a simulated server.
+- Odoo Online or Enterprise, and a non-admin Odoo integration user.
+- Offsite backups (backups stay on the server's disk unless you copy them) and load testing.
+
+Note: refresh tokens of Google apps in "Testing" status expire after 7 days. Renewal is documented in `docs/MAILBOX-SETUP.md`.
+
+Also not covered: high availability, scanned PDFs, and accuracy on real customer orders. The held-out set is 36 synthetic cases.
 
 ## What I'd say it demonstrates
 
 - **AI with guardrails.** Model output must match a schema and is re-validated. Every product must match a catalogue SKU by lookup, and nothing is substituted. The default demo needs no model.
 - **An idempotent workflow.** Intake dedupes on transport key and file hash. Approval binds to one version. Export is idempotent per approved version. Jobs use leases and retries.
 - **Honest evaluation.** Development and held-out sets are reported separately, failures are listed, and a deterministic check was added after a silent model failure.
-- **A real ERP hand-off.** The CSV follows the format Odoo 19's own import accepts. Approved orders can also be pushed to Odoo as draft quotations over its JSON-RPC API. Both were verified in a local Odoo 19 instance, not in a customer's ERP.
+- **A real ERP hand-off.** The CSV follows the format Odoo 19's own import accepts. Approved orders can also be pushed to Odoo as draft quotations over its JSON-RPC API. Both were verified in local Odoo 17, 18 and 19 instances, not in a customer's ERP.
 
 Architecture, the demo walkthrough and interview notes: [docs/DEMO.md](docs/DEMO.md).
 

@@ -5,12 +5,15 @@ PB_PROJECT="${PB_PROJECT:-pennbridge}"
 PB_ENV_FILE="${PB_ENV_FILE:-$PB_ROOT/.env}"
 
 pb_die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+# .env is mode 600 and Docker needs root: a plain user would otherwise see confusing "permission denied" noise or a false "down".
+[[ ! -e "$PB_ENV_FILE" || -r "$PB_ENV_FILE" ]] || pb_die "cannot read $PB_ENV_FILE: run this script with sudo"
 pb_env() { # pb_env NAME [default]: read a value from the env file
   local v; v="$(grep -E "^$1=" "$PB_ENV_FILE" 2>/dev/null | tail -n1 | cut -d= -f2-)"; printf '%s' "${v:-${2:-}}"
 }
 # Runs `docker compose` against the production files plus the overlays the current .env calls for.
 pb_compose() {
   [[ -f "$PB_ENV_FILE" ]] || pb_die "no $PB_ENV_FILE; run scripts/install.sh first"
+  docker info >/dev/null 2>&1 || pb_die "cannot talk to Docker (not running, or run this script with sudo)"
   local files=(-f "$PB_ROOT/infra/compose.prod.yaml")
   [[ "$(pb_env LIVE_AI_ENABLED false)" == true ]] && files+=(-f "$PB_ROOT/infra/compose.prod.live-ai.yaml")
   [[ -f "$(pb_env PB_MAILBOX_DIR "$PB_ROOT/runtime/mailbox")/config.json" ]] && files+=(-f "$PB_ROOT/infra/compose.prod.mailbox.yaml")

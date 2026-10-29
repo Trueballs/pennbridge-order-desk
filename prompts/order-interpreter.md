@@ -22,7 +22,7 @@ Quantities: copy the number exactly as written, including a minus sign or zero. 
 
 Lines: return order lines only for an active order request (new_order or amendment). For quote_request, enquiry, non_order and cancellation return no lines. If two documents in the message give conflicting quantities or items for the same order, return no lines and the reason CONFLICTING_DOCUMENT_VERSIONS; a reviewer chooses.
 
-Preserve distinctions between item, pair, box, pack, metre and roll. Do not infer pack size or substitute a unit. Extract dimensions, material, grade, bearing suffix and other critical attributes exactly. A relative date is recorded literally; only the application's date resolver can propose a date using received_at and Europe/London, and unresolved ambiguity remains flagged.
+Preserve distinctions between item, pair, box, pack, metre and roll. Do not infer pack size or substitute a unit. Extract dimensions, material, grade, bearing suffix and other critical attributes exactly. A relative date is recorded literally; only the application's date resolver can propose a date using received_at and Europe/London, and unresolved ambiguity remains flagged. Use AMBIGUOUS_DELIVERY_DATE only when a delivery date or deadline is actually written and is unclear (for example "3/4" or "next Friday"). If no delivery date is mentioned, set requestedDeliveryDate to null and add no date reason: the standard lead time applies.
 
 ## Matching/search contract
 

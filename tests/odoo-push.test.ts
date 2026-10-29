@@ -5,7 +5,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { ExtractedOrder, ExtractionProvider, Session } from "../packages/contracts";
-import { OdooPushError, odooConfigFromEnv, pushExternalId, pushQuotation, type PushInput } from "../packages/server/odoo";
+import { OdooPushError, odooConfigFromEnv, odooCsvForVersion, pushExternalId, pushQuotation, quotationUrl, type PushInput } from "../packages/server/odoo";
 import { validateEnv } from "../packages/db/env";
 
 // ---- Fake Odoo JSON-RPC server (just enough of common.authenticate + object.execute_kw) -----------------------------------
@@ -13,6 +13,9 @@ const KEY = "test-secret-key-do-not-log";
 class FakeOdoo {
   xmlids = new Map<string, { model: string; res_id: number }>();
   orders = new Map<number, { id: number; name: string; origin: string; state: string; vals: any; amount_untaxed: number }>();
+  /** Which Odoo the fake pretends to be: 17/18 use product_uom on order lines, 19 product_uom_id. `null` = common.version unsupported. */
+  major: number | null = 19; versionCalls = 0;
+  get uomField() { return (this.major ?? 19) >= 19 ? "product_uom_id" : "product_uom"; }
   fail5xx = 0; rejectKey = false; accessError = false; calls: string[] = []; creates = 0; server!: http.Server; url = "";
   seedMaster(snapshot: PushInput) {
     this.xmlids.set(snapshot.customerExternalId, { model: "res.partner", res_id: 7 });
@@ -24,12 +27,17 @@ class FakeOdoo {
   private rpcError(name: string, message = "x") { return { jsonrpc: "2.0", id: 1, error: { code: 200, message: "Odoo Server Error", data: { name, message } } }; }
   handle(body: any) {
     const { service, method, args } = body.params;
+    if (service === "common" && method === "version") {
+      this.versionCalls++;
+      return this.major === null ? this.rpcError("odoo.exceptions.AccessDenied") : { jsonrpc: "2.0", id: 1, result: { server_version: `${this.major}.0`, server_version_info: [this.major, 0, 0, "final", 0, ""], protocol_version: 1 } };
+    }
     if (service === "common" && method === "authenticate") { this.calls.push("authenticate"); return { jsonrpc: "2.0", id: 1, result: this.rejectKey || args[2] !== KEY ? false : 5 }; }
     const [, uid, key, model, m, a, kw = {}] = args;
     if (key !== KEY || uid !== 5) return this.rpcError("odoo.exceptions.AccessDenied");
     if (this.accessError) return this.rpcError("odoo.exceptions.AccessError", "Sorry, you are not allowed");
     this.calls.push(`${model}.${m}`);
     const ok = (result: unknown) => ({ jsonrpc: "2.0", id: 1, result });
+    if (model === "sale.order.line" && m === "fields_get") return ok(Object.fromEntries((a[0] as string[]).filter((f) => f === this.uomField).map((f) => [f, { type: "many2one" }])));
     if (model === "ir.model.data" && m === "search_read") {
       const d = a[0];
       if (d[0][0] === "module" && d[0][1] === "in") { // batch lookup by module/name pairs (complete_name is not searchable in Odoo 19)
@@ -132,6 +140,52 @@ describe("Odoo push against a fake JSON-RPC server", () => {
   });
   it("never confirms the order (only create/read/search calls are made)", () => {
     expect(odoo.calls.filter((c) => /action_confirm|write|unlink/.test(c))).toEqual([]);
+  });
+});
+
+describe("Odoo version adaptation (fake server answering as Odoo 17, 18 and 19)", () => {
+  const fake = new FakeOdoo();
+  beforeAll(() => fake.start()); afterAll(() => fake.stop());
+  const lineVals = (r: { id: number }) => fake.orders.get(r.id)!.vals.order_line[0][2];
+
+  for (const [major, uomField] of [[17, "product_uom"], [18, "product_uom"], [19, "product_uom_id"]] as const) {
+    it(`Odoo ${major}: lines use ${uomField}, never the other field, and the server version is reported`, async () => {
+      fake.major = major; const i = input(); fake.seedMaster(i);
+      const r = await pushQuotation(cfg(fake.url), i, UNITS);
+      expect(r).toMatchObject({ created: true, state: "draft", totalMatches: true, serverMajor: major, serverVersion: `${major}.0` });
+      const line = lineVals(r);
+      expect(line[uomField]).toBe(50); expect(Object.keys(line)).not.toContain(uomField === "product_uom" ? "product_uom_id" : "product_uom");
+      expect(line).toMatchObject({ product_id: 100, product_uom_qty: 2, price_unit: 10 });
+      expect(await pushQuotation(cfg(fake.url), i, UNITS)).toMatchObject({ id: r.id, created: false }); // idempotent on every version
+    });
+  }
+  it("an unknown version endpoint still works: the unit field comes from fields_get and the default link format is used", async () => {
+    fake.major = null; const i = input(); fake.seedMaster(i);
+    const r = await pushQuotation(cfg(fake.url), i, UNITS);
+    expect(r).toMatchObject({ created: true, serverMajor: null, serverVersion: null }); expect(lineVals(r).product_uom_id).toBe(50);
+    fake.major = 19;
+  });
+  it("an Odoo with neither unit field is rejected permanently, before anything is created", async () => {
+    fake.major = 19; const i = input(); fake.seedMaster(i); const before = fake.creates;
+    const original = Object.getOwnPropertyDescriptor(FakeOdoo.prototype, "uomField")!;
+    Object.defineProperty(fake, "uomField", { get: () => "something_else", configurable: true });
+    const error = await pushQuotation(cfg(fake.url), i, UNITS).catch((e) => e); delete (fake as any).uomField; Object.defineProperty(FakeOdoo.prototype, "uomField", original);
+    expect(error).toMatchObject({ kind: "rejected", retryable: false }); expect(fake.creates).toBe(before);
+  });
+  it("builds the quotation link per version: /web#... on 17, /odoo/action-... on 18, 19 and unknown", () => {
+    const c = { url: "http://odoo.internal/" }, prev = process.env.ODOO_PUBLIC_URL; delete process.env.ODOO_PUBLIC_URL;
+    expect(quotationUrl(c, 7, 17)).toBe("http://odoo.internal/web#id=7&model=sale.order&view_type=form");
+    expect(quotationUrl(c, 7, 18)).toBe("http://odoo.internal/odoo/action-sale.action_quotations_with_onboarding/7");
+    expect(quotationUrl(c, 7, 19)).toBe("http://odoo.internal/odoo/action-sale.action_quotations_with_onboarding/7");
+    expect(quotationUrl(c, 7)).toBe("http://odoo.internal/odoo/action-sale.action_quotations_with_onboarding/7");
+    process.env.ODOO_PUBLIC_URL = "http://127.0.0.1:8067/"; expect(quotationUrl(c, 7, 17)).toBe("http://127.0.0.1:8067/web#id=7&model=sale.order&view_type=form");
+    if (prev === undefined) delete process.env.ODOO_PUBLIC_URL; else process.env.ODOO_PUBLIC_URL = prev;
+  });
+  it("renames only the header unit column of the desk CSV for Odoo 17/18", () => {
+    const csv = 'id,order_line/product_uom_id/id\n"x","order_line/product_uom_id/id"\n';
+    expect(odooCsvForVersion(csv, 19)).toBe(csv);
+    expect(odooCsvForVersion(csv, 18)).toBe('id,order_line/product_uom/id\n"x","order_line/product_uom_id/id"\n');
+    expect(odooCsvForVersion(csv, 17)).toBe(odooCsvForVersion(csv, 18));
   });
 });
 

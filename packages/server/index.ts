@@ -7,7 +7,7 @@ import type { PoolClient } from "pg";
 import { authenticate, revokeToken, sessionFromToken } from "./auth"; // W3
 import { AddLineRequestSchema, AddressSchema, AssignCustomerRequestSchema, ExtractedOrderSchema, IntakeRequestSchema, OrderListQuerySchema, ReasonCodeSchema, RemoveLineRequestSchema, ReprocessRequestSchema, SenderMappingInputSchema, VerifyExportRequestSchema, VoidExportRequestSchema, type AddLineRequest, type Address, type AmendmentRequest, type AssignCustomerRequest, type DraftLine, type ExtractedLine, type ReasonCode, type RemoveLineRequest, type RemovedLine, type ReprocessRequest, type SenderMapping, type SenderMappingInput, type SuggestedCustomer, type VoidExportRequest, type ApproveRequest, type CancelRequest, type Customer, type Document, type DocumentEvidence, type EditOrderRequest, type ExportRequest, type ExportSnapshot, type ExtractedOrder, type ExtractionProvider, type IntakeRequest, type IntakeResponse, type Job, type HistoricalSuggestion, type OrderDetail, type OrderListQuery, type OrderListResponse, type Product, type Session, type SourceMessage, type Unit, type ValidatedDraft, type VerifyExportRequest } from "@pennbridge/contracts";
 import { audit, failJob, id, jobFromRow, migrate, pool, sha256, transaction, type DbClient } from "@pennbridge/db";
-import { queueOdooPush as queuePush, runOdooPush as runPush } from "./odoo";
+import { odooCsvForVersion, queueOdooPush as queuePush, runOdooPush as runPush } from "./odoo";
 import { CATALOGUE_VERSION, currentCatalogueVersion, seedDatabase } from "@pennbridge/db/seed";
 import { authVerdict, canApprove, canonicalJson, classifyFailure, contentHash, anchorEvidence, hasUnresolved, isFreemailDomain, lineCoverage, londonDate, publicError as toPublicError, quantity, reason, senderParts, ServiceError, validate, type ValidationRepository } from "@pennbridge/domain";
 export { ServiceError } from "@pennbridge/domain";
@@ -333,7 +333,7 @@ export async function exportOrder(actor:Session,orderId:string,input:ExportReque
     const snapshot:ExportSnapshot={id:id("export"),orderId,orderVersion:order.version,approvalId:order.approval.id,contentHash:order.contentHash,idempotencyKey:input.idempotencyKey,externalId:`pennbridge.quote_${orderId.replace(/[^a-zA-Z0-9_]/g,"_")}`,
       customerExternalId:customer.externalId,shippingAddressExternalId:address.externalId,poNumber:order.poNumber!,currency:order.currency,lines,total:order.total,mappingVersion:"odoo19-quotation-v2",artifactHash:"",filename:`${orderId}-v${order.version}.csv`,
       state:"prepared",preparedBy:actor.userId,preparedAt:now,downloadedAt:null,verifiedAt:null,verifiedBy:null,quotationReference:null};
-    const artifact=Buffer.from(renderOdooCsv(snapshot)); snapshot.artifactHash=sha256(artifact);
+    const artifact=Buffer.from(odooCsvForVersion(renderOdooCsv(snapshot),Number(process.env.ODOO_VERSION||19))); snapshot.artifactHash=sha256(artifact);
     await client.query("INSERT INTO exports(id,order_id,version,idempotency_key,data,artifact) VALUES($1,$2,$3,$4,$5,$6)",[snapshot.id,orderId,order.version,input.idempotencyKey,snapshot,artifact]);
     await saveOrder(client,{...order,status:"exported",updatedAt:now},false); await audit(client,orderId,actor,"export.prepared",order.version,{exportId:snapshot.id});
     return snapshot;
