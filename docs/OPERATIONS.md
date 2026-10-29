@@ -54,7 +54,7 @@ scripts/pbctl.sh up -d                    # the mailbox overlay is added automat
 scripts/pbctl.sh logs -f mailbox
 ```
 
-The receiver only reads (it never marks mail read or deletes). The `subjectPrefix` in `config.json` can be empty to ingest all mail, subject to the receiver's auto-reply and rate filters. Credential rejection raises an alert that shows in readiness and makes the mailbox container unhealthy. See `docs/TEST-INBOX.md` for mailbox details. *Not tested here: a live IMAP connection.*
+The receiver only reads (it never marks mail read or deletes). The `subjectPrefix` in `config.json` can be empty to ingest all mail, subject to the receiver's auto-reply and rate filters. Credential rejection raises an alert that shows in readiness and makes the mailbox container unhealthy. See `docs/TEST-INBOX.md` for mailbox details. *Not tested here: a live IMAP connection on the production compose (the dev stack was verified against a real Gmail mailbox on 2026-10-29: results/e2e/2026-10-29-live-email.md).*
 
 ## Gemini (live extraction)
 

@@ -1,5 +1,21 @@
 # Production hardening plan (2026-10-28)
 
+## Status (2026-10-29)
+
+Current status. The work sections below are the plan as written on 2026-10-28; they are kept for reference, not as a to-do list.
+
+- **Wave 1 (ops, infra, database): done.** Install script, production Compose with Caddy HTTPS, restart policies and healthchecks, readiness endpoint, env validation, migration runner, backup/restore/upgrade scripts, monthly AI budget, security headers, GitHub Actions CI. See [OPERATIONS.md](OPERATIONS.md).
+- **Wave 2 (order workflow, admin UI, Odoo push, E2E): done.** Sender mappings with SPF/DKIM/DMARC gating, manual path (add/remove line, reprocess, manual entry), search and paging, accounts and CSV import, direct Odoo push of approved orders, 9 Playwright browser tests, live Gmail end-to-end run (2026-10-29).
+- **Not yet verified:**
+  - Let's Encrypt issuance on a real public domain (only Caddy's internal CA tested)
+  - `scripts/install.sh` on a real Ubuntu server (macOS test, Docker install skipped)
+  - Microsoft 365 / OAuth mailboxes (IMAP with app password only)
+  - Minimal permissions for the Odoo integration user
+  - Odoo versions other than 19
+  - Offsite backup copies (not provided), high availability and sustained load (not tested)
+
+## Plan (2026-10-28)
+
 Goal: a wholesaler (10–50 staff, a few reviewers, Odoo, one shared orders@ mailbox, one Linux server) can install and run this with their own data. Source: code audit (IDs P0-x/P1-x/P2-x below) plus a live end-to-end email run.
 
 ## Rules for every worker

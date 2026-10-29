@@ -1,6 +1,8 @@
 # Pennbridge Order Desk
 
-A local purchase-order desk for a fictional UK industrial wholesaler. It reads emailed orders, checks every line against the catalogue and agreed prices, and prepares an Odoo quotation file only after a person approves the order.
+Purchase-order intake for a fictional UK industrial wholesaler. It reads orders from email and PDF attachments, checks every line against the catalogue and agreed prices, and creates an Odoo draft quotation only after a person approves the order. It runs locally or on a single Linux server. All data is synthetic.
+
+**Live end-to-end proof (2026-10-29):** a real Gmail order (PO E2E-07) from a trusted sender was read by Gemini, assigned to its customer, approved in the browser and pushed to Odoo as draft quotation **S00009** (£42.70).
 
 > **Results** (held-out set: 36 synthetic cases, written separately from the prompt, never used for tuning)
 >
@@ -14,12 +16,37 @@ A local purchase-order desk for a fictional UK industrial wholesaler. It reads e
 >
 > Development set (70 visible cases, prompt tuned on them): 37 of 42 emails and 18 of 20 PDFs. Full method, failures and limits: [docs/EVALUATION.md](docs/EVALUATION.md).
 
+## Production-ready features
+
+Built for one Linux server. What was and was not exercised is listed in [docs/OPERATIONS.md](docs/OPERATIONS.md).
+
+- **Install and TLS:** one install script, Caddy HTTPS, production Compose with restart policies and healthchecks.
+- **Health:** a readiness endpoint (`/api/ready`) covering the database, worker heartbeat, queue age and mailbox polling, with a banner in the desk.
+- **Backups:** nightly database and document backups, plus restore, restore-verify and upgrade (with rollback) scripts.
+- **Accounts:** admin-managed users and roles, throttled login, password policy, session expiry, first-run admin CLI.
+- **Master data:** CSV import wizard with a per-row dry run for products, customers, addresses, prices, aliases, stock and sender mappings.
+- **Sender trust:** a trusted sender is assigned automatically only when SPF, DKIM and DMARC pass at the receiving server. Otherwise a person confirms the customer.
+- **Cost and failure control:** monthly and per-order AI budgets, bounded job retries with dead-letter handling, manual entry when extraction fails.
+- **Odoo and CI:** approved orders can be pushed to Odoo as idempotent draft quotations. GitHub Actions runs typecheck, 101 unit tests, 84 database tests, 9 browser tests and a dependency audit.
+
+## Known limits
+
+Not verified yet:
+
+- Let's Encrypt certificates on a real public domain. Only Caddy's internal CA has been tested.
+- `scripts/install.sh` on a real Ubuntu server. The test ran on macOS with Docker installation skipped.
+- Microsoft 365 or other OAuth mailboxes. Only IMAP with an app password has been tested.
+- Minimal permissions for the Odoo integration user.
+- Odoo versions other than 19.
+
+Also not covered: offsite backup copies (backups stay on the server's disk unless you copy them), high availability, sustained load, scanned PDFs, and accuracy on real customer orders. The held-out set is 36 synthetic cases.
+
 ## What I'd say it demonstrates
 
 - **AI with guardrails.** Model output must match a schema and is re-validated. Every product must match a catalogue SKU by lookup, and nothing is substituted. The default demo needs no model.
 - **An idempotent workflow.** Intake dedupes on transport key and file hash. Approval binds to one version. Export is idempotent per approved version. Jobs use leases and retries.
 - **Honest evaluation.** Development and held-out sets are reported separately, failures are listed, and a deterministic check was added after a silent model failure.
-- **A real ERP export.** The CSV follows the format Odoo 19's own import accepts. It was verified in a local Odoo instance, not in a customer's ERP.
+- **A real ERP hand-off.** The CSV follows the format Odoo 19's own import accepts. Approved orders can also be pushed to Odoo as draft quotations over its JSON-RPC API. Both were verified in a local Odoo 19 instance, not in a customer's ERP.
 
 Architecture, the demo walkthrough and interview notes: [docs/DEMO.md](docs/DEMO.md).
 
@@ -74,38 +101,44 @@ npx tsx scripts/evaluate.ts
 npx tsx scripts/evaluate_pdfs.ts
 ```
 
+GitHub Actions runs typecheck, unit tests, the database suites on PostgreSQL 17, a Compose config check and a production dependency audit on every push to `main` and every pull request. Browser tests (`npm run test:browser`) need a throwaway database; see the header of `tests/e2e/desk.spec.ts`.
+
 The 50 original email fixtures and 20 generated PDF fixtures are synthetic and visible development data. Current acceptance artifacts are in ignored `results/acceptance/`; methodology, results, and limits are in [docs/EVALUATION.md](docs/EVALUATION.md). All 50 email cases are now accounted for across two separate mock-mode runs: 42 stateless parser/domain cases and 8 stateful cases through real PostgreSQL/services. The stateful suite checks duplicates, amendments, cancellations, and history suggestions. This is not one end-to-end AI run. Database-backed lifecycle checks use separate isolated test databases; commands are in the evaluation guide.
 
 ## Architecture and scope
 
 - **Next.js and TypeScript** provide the desk and authenticated API.
 - **PostgreSQL** stores jobs, orders, documents, evidence, catalogue, audit history, and export snapshots. **A separate worker** claims leased jobs and applies bounded retry/dead-letter handling.
-- **Mailpit** captures the synthetic demo email locally. The app has no external mail relay. A dedicated test mailbox can also feed the desk through a small IMAP receiver (see below).
-- **`parseInput`** reads MIME, plain text, sanitized HTML, CSV, and machine-generated PDF text. **`MockProvider`** is the default: deterministic rule-based extraction, not a language model. An optional Gemini adapter (off by default) is a language model; its reply must match a schema and is re-validated before use.
+- **Mailpit** captures the synthetic demo email locally (demo only). The app has no outbound mail relay. A dedicated mailbox, such as a shared `orders@` address, feeds the desk through a small IMAP receiver (see below).
+- **`parseInput`** reads MIME, plain text, sanitized HTML, CSV, and machine-generated PDF text. **`MockProvider`** is the default in the demo: deterministic rule-based extraction, not a language model. Outside demo mode the desk uses Gemini when it is configured, and otherwise a manual-entry provider that leaves the order for a reviewer. A Gemini reply must match a schema and is re-validated before use.
 - **Domain validation** checks catalogue matches, customer-scoped aliases, effective prices, selling units, stock observations, addresses, flags, and approval requirements.
 - **Synthetic history** is returned as a bounded, customer-scoped suggestion with provenance for reviewer confirmation. It is not sent to the extraction provider, and historical prices are not copied into current drafts.
-- **CSV export** is version-bound and generated only after human approval. The optional Odoo test stack and verified mapping are documented in [docs/ODOO-IMPORT.md](docs/ODOO-IMPORT.md).
+- **Odoo** has two routes, both producing drafts. The CSV is version-bound and generated only after human approval; a person imports it (Test, then Import). **Send to Odoo** creates the same quotation over Odoo's JSON-RPC API, idempotent on retry. See [docs/ODOO-IMPORT.md](docs/ODOO-IMPORT.md).
+- **Accounts and master data.** Users with roles, throttled login and session expiry. The CSV import wizard runs a dry run first and writes nothing if any row fails.
+- **Sender trust.** A sender mapping suggests a customer. It is assigned automatically only for a trusted mapping whose receiving-server SPF, DKIM and DMARC results pass.
 
-Generated scale fixtures contain 10,000 SKUs (8,000 active), 250 accounts, 500 addresses, 5,000 aliases, 15,000 price agreements, and 12,000 synthetic history records. A dated local Odoo 19 proof imported and reimported test quotations through Odoo's CSV import machinery. This does not connect to a customer's ERP, send customer mail, reserve inventory, or establish production readiness.
+Generated scale fixtures contain 10,000 SKUs (8,000 active), 250 accounts, 500 addresses, 5,000 aliases, 15,000 price agreements, and 12,000 synthetic history records. A dated local Odoo 19 proof imported and reimported test quotations through Odoo's CSV import machinery. The Odoo push creates draft quotations only. It does not confirm, invoice, email or reserve stock. Nothing here is connected to a customer's ERP.
 
 ## Measured result and limitations
 
-The 42-case stateless run passed all intent, route, required-flag, line-field, and customer checks; the separate real-PostgreSQL/services run passed all 8 stateful fixture cases. Together these account for the original 50 synthetic email cases, but they are different runs: the 42-case set uses fresh in-memory context, while the 8-case set exercises database state and replay behavior. The separate lifecycle suite passed 8 PostgreSQL checks; 12 domain checks run offline. All 20 machine-generated PDF cases passed 286/286 labelled line fields, including SKU, quantity, unit, quoted unit price, and page-backed evidence checks. The default `npm test` run passes 19 offline tests and skips 16 database-backed tests unless their dedicated environment variables are set. The offline evaluators use `MockProvider`, so these figures are not AI accuracy, production accuracy, or a customer outcome.
+The 42-case stateless run passed all intent, route, required-flag, line-field, and customer checks; the separate real-PostgreSQL/services run passed all 8 stateful fixture cases. Together these account for the original 50 synthetic email cases, but they are different runs: the 42-case set uses fresh in-memory context, while the 8-case set exercises database state and replay behavior. The separate lifecycle suite passed 8 PostgreSQL checks; 12 domain checks run offline. All 20 machine-generated PDF cases passed 286/286 labelled line fields, including SKU, quantity, unit, quoted unit price, and page-backed evidence checks. Database-backed suites run only when their dedicated environment variables are set. CI runs them against PostgreSQL 17. The offline evaluators use `MockProvider`, so these figures are not AI accuracy, production accuracy, or a customer outcome.
 
 Live Gemini results are reported separately:
 
 - **Held-out set (36 cases, one run per model):** gemini-3.5-flash-lite got 25/30 emails and 6/6 PDFs fully correct, at a median 1.7 s and about $0.0038 per order. gemini-3.8-flash got 24/30 emails and 3/6 PDFs; its three PDF timeouts at the 60 s request limit account for the gap. Failures, the safety property and the model comparison are in [docs/EVALUATION.md](docs/EVALUATION.md#held-out-results).
 - **Development set (70 visible cases, prompt tuned on them):** run 2 got 37/42 emails and 18/20 PDFs with every line exact, but only 167/286 PDF lines. It silently omitted lines on two 60-line PDFs. A row-count check added afterwards (`INCOMPLETE_EXTRACTION`) now blocks that case. Details in [docs/EVALUATION.md](docs/EVALUATION.md#live-ai-results-gemini).
 
-Scanned PDFs/OCR, real customer documents, hosted deployment, automated ERP posting, and live use on real customer orders are outside this prototype. Live mode sends email text to Google and should only be used with synthetic orders.
+Scanned PDFs/OCR and live use on real customer orders are outside this prototype. A single-server deployment path exists ([docs/OPERATIONS.md](docs/OPERATIONS.md)) but is not verified on a real server or public domain. Live mode sends email text to Google; use synthetic orders unless you have decided that is acceptable for your data.
 
-**CV-ready description:** Built a local purchase-order desk with Next.js, TypeScript, PostgreSQL, Docker Compose, deterministic extraction, optional live Gemini extraction (25/30 emails and 6/6 PDFs on a held-out set of 36 synthetic cases, about $0.004 per order), reviewer approval, and Odoo-compatible quotation export; verified a local Odoo 19 quotation import.
+**CV-ready description:** Built a local purchase-order desk with Next.js, TypeScript, PostgreSQL, Docker Compose, deterministic extraction, optional live Gemini extraction (25/30 emails and 6/6 PDFs on a held-out set of 36 synthetic cases, about $0.004 per order), reviewer approval, a direct Odoo draft-quotation push, and CSV export; verified in a local Odoo 19 instance.
 
 ## Project references
 
 - [Acceptance runbook and measured results (including held-out)](docs/EVALUATION.md)
 - [Demo walkthrough and interview notes](docs/DEMO.md)
 - [Screen-recording script](docs/VIDEO-SCRIPT.md)
+- [Install, TLS, backups, upgrade and monitoring (one Linux server)](docs/OPERATIONS.md)
+- [CSV import templates](docs/import-templates/README.md)
 - [Local system, permission, restore, and worker-recovery checks](docs/SYSTEM-CHECKS.md)
 - [Local Odoo import proof and field mapping](docs/ODOO-IMPORT.md)
 - [Business and technical specification](docs/PROJECT-SPEC.md)
@@ -118,4 +151,4 @@ The completed local demo includes Odoo quotation **S00007** from PDF-001, checke
 
 ## Receive email from a dedicated test mailbox
 
-A dedicated Gmail test inbox is connected over IMAP and was verified end to end with a real email on 2026-10-28. Follow [TEST-INBOX.md](docs/TEST-INBOX.md) to connect your own. It runs locally without n8n or paid hosting, preserves the email and attachments, and keeps customer identity unresolved for review. Processing uses the mock extractor unless live AI is turned on; the live path is described in [TEST-INBOX.md](docs/TEST-INBOX.md#live-ai-in-the-desk).
+A dedicated Gmail test inbox is connected over IMAP. It was verified end to end with a real email on 2026-10-28, and again on 2026-10-29 with a trusted sender through live Gemini and the Odoo push. Follow [TEST-INBOX.md](docs/TEST-INBOX.md) to connect your own. It runs without n8n or paid hosting, preserves the email and attachments, and keeps customer identity unresolved for review unless a trusted sender mapping passes SPF, DKIM and DMARC. Processing uses the mock extractor unless live AI is turned on; the live path is described in [TEST-INBOX.md](docs/TEST-INBOX.md#live-ai-in-the-desk).
