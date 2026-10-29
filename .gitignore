@@ -16,3 +16,5 @@ test-results/
 .venv/
 backups/
 certs/
+
+video/out/

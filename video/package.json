@@ -1,0 +1,7 @@
+{
+  "name": "pennbridge-demo-video",
+  "private": true,
+  "type": "module",
+  "description": "Recorder pinned to playwright-core 1.58.2 so it matches the locally cached browser builds (chromium 1208, ffmpeg 1011). Run: npm install --prefix video",
+  "dependencies": { "playwright-core": "1.58.2" }
+}
