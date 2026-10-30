@@ -1,4 +1,22 @@
-# Pennbridge Order Desk demo video: voiceover script
+# Pennbridge Order Desk demo video: voiceover
+
+## AI voiceover (current)
+
+The voiceover is AI-generated with Google Gemini TTS (model `gemini-3.8-flash-tts`, voice **Achird**, relaxed conversational style). All on-screen text and spoken lines come from `video/COPY.md` (mirrored in `video/copy.ts`). The scripts below under "Script" are the older hand-read version and are kept only for reference.
+
+Make the video (from the repo root, stack running, `GEMINI_API_KEY` set or `runtime/ai/gemini_key` present):
+
+```sh
+npx tsx video/voiceover.ts --po <PO>      # TTS per scene -> video/out/voice/, voice-durations.json, voice-samples/
+npx tsx video/record.ts --po <PO>         # silent video, scene lengths follow the voice (+0.8 s); add --dry-run to develop
+npx tsx video/mix.ts                      # video/out/pennbridge-demo-voice.mp4 (voice at -16 LUFS, no music)
+```
+
+- Another voice: `npx tsx video/voiceover.ts --po <PO> --voice Umbriel`, then record and mix again. Listen to the 1-line samples in `video/out/voice-samples/` (Achird, Umbriel, Zubenelgenubi, Sadaltager, Iapetus) to choose. Results are cached per voice, text and style in `video/out/tts-cache/`, so reruns are free. A full voice costs about 3 US cents.
+- Use the same `--po` for voiceover.ts and record.ts: the spoken "{latency}" and "{cost}" must match the captions (record.ts stops if they differ).
+- The silent `video/out/pennbridge-demo.mp4` is always kept. You can still record your own voice over it with the older methods below.
+
+## Script (older hand-read version)
 
 Silent video: `video/out/pennbridge-demo.mp4` (1920x1080, H.264, 30 fps, 2:44.5). Captions are burned in, so the video also works muted.
 
