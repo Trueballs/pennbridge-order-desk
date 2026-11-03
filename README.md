@@ -2,6 +2,8 @@
 
 Purchase-order intake for a fictional UK industrial wholesaler. It reads orders from email and PDF attachments, checks every line against the catalogue and agreed prices, and creates an Odoo draft quotation only after a person approves the order. It runs locally or on a single Linux server. All data is synthetic.
 
+Built in October 2026 by directing AI coding agents (Codex and Claude Code). It is a portfolio prototype, not a customer system; every accuracy number below comes from runs documented in [docs/EVALUATION.md](docs/EVALUATION.md).
+
 **Live end-to-end proof (2026-10-29):** a real Gmail order (PO E2E-07) from a trusted sender was read by Gemini, assigned to its customer, approved in the browser and pushed to Odoo as draft quotation **S00009** (£42.70).
 
 > **Results** (held-out set: 36 synthetic cases, written separately from the prompt, never used for tuning)
@@ -27,7 +29,7 @@ Built for one Linux server. What was and was not exercised is listed in [docs/OP
 - **Master data:** CSV import wizard with a per-row dry run for products, customers, addresses, prices, aliases, stock and sender mappings.
 - **Sender trust:** a trusted sender is assigned automatically only when SPF, DKIM and DMARC pass at the receiving server. Otherwise a person confirms the customer.
 - **Cost and failure control:** monthly and per-order AI budgets, bounded job retries with dead-letter handling, manual entry when extraction fails.
-- **Odoo and CI:** approved orders can be pushed to Odoo as idempotent draft quotations. GitHub Actions runs typecheck, 101 unit tests, 84 database tests, 9 browser tests and a dependency audit.
+- **Odoo and CI:** approved orders can be pushed to Odoo as idempotent draft quotations. GitHub Actions runs typecheck, the unit and PostgreSQL database suites and a dependency audit on every push. The 9 browser tests run locally, since they need a throwaway database.
 
 ## Known limits
 
@@ -140,12 +142,10 @@ Live Gemini results are reported separately:
 
 Scanned PDFs/OCR and live use on real customer orders are outside this prototype. A single-server deployment path exists ([docs/OPERATIONS.md](docs/OPERATIONS.md)) but is not verified on a real server or public domain. Live mode sends email text to Google; use synthetic orders unless you have decided that is acceptable for your data.
 
-**CV-ready description:** Built a local purchase-order desk with Next.js, TypeScript, PostgreSQL, Docker Compose, deterministic extraction, optional live Gemini extraction (25/30 emails and 6/6 PDFs on a held-out set of 36 synthetic cases, about $0.004 per order), reviewer approval, a direct Odoo draft-quotation push, and CSV export; verified in a local Odoo 19 instance.
-
 ## Project references
 
 - [Acceptance runbook and measured results (including held-out)](docs/EVALUATION.md)
-- [Demo walkthrough and interview notes](docs/DEMO.md)
+- [Demo walkthrough](docs/DEMO.md)
 - [Screen-recording script](docs/VIDEO-SCRIPT.md)
 - [Install, TLS, backups, upgrade and monitoring (one Linux server)](docs/OPERATIONS.md)
 - [CSV import templates](docs/import-templates/README.md)
